@@ -55,7 +55,7 @@ Don't spend more than about 20s on the second step: its outage lasts 30s, and on
 | Bring processes back | Temporal: *escalated and denied*, a row in *Escalations*; ADK: *Deadline passed Ns ago. Nothing woke this invocation.* | The timer fired on the Temporal Service with no Worker running. |
 | Late approval | ADK refunds | Resumable, yes. Acting on time needs infrastructure. Leave the act's two cards on screen during questions. |
 
-### Act 4 · Side effects: recorded by the Service vs by the host (6 min)
+### Act 4 · Tool results: recorded on completion vs saved later (6 min)
 
 | Step | Point at | Say |
 |---|---|---|
