@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Resumable agent vs durable agent: demo architecture",
+    "output": "doc/architecture.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "presenter", "type": "external", "label": "Presenter", "sublabel": "browser", "pos": [40, 330], "size": [130, 64] },
+    { "id": "control", "type": "frontend", "label": "Demo UI + control API", "sublabel": "FastAPI :8400, process supervisor", "pos": [320, 330], "size": [210, 64] },
+    { "id": "sessions", "type": "database", "label": "ADK session DB", "sublabel": "SqliteSessionService", "pos": [690, 40], "size": [190, 64] },
+    { "id": "adk-hosts", "type": "backend", "label": "ADK hosts A, B", "sublabel": "Runner, resumable App, agent.py", "pos": [690, 190], "size": [190, 64] },
+    { "id": "workers", "type": "backend", "label": "Temporal Workers A, B", "sublabel": "RefundWorkflow, same agent.py", "pos": [690, 470], "size": [190, 64] },
+    { "id": "temporal", "type": "cloud", "label": "Temporal Service", "sublabel": "event history, timers, task queue", "pos": [690, 620], "size": [190, 64] },
+    { "id": "business", "type": "external", "label": "Business systems", "sublabel": "payments, orders, email ledger", "pos": [1100, 330], "size": [200, 64], "tag": "Idempotency-Key aware" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "ADK runtime: resumability", "wraps": ["sessions", "adk-hosts"] },
+    { "kind": "region", "label": "Temporal runtime: durable execution", "wraps": ["workers", "temporal"] }
+  ],
+  "connections": [
+    { "id": "presenter-drives", "from": "presenter", "to": "control", "label": "Next, kill -9", "variant": "emphasis" },
+    { "id": "control-adk", "from": "control", "to": "adk-hosts", "label": "/runs, /resume, /confirm", "fromSide": "top", "toSide": "left" },
+    { "id": "adk-sessions", "from": "adk-hosts", "to": "sessions", "label": "append events", "fromSide": "top", "toSide": "bottom" },
+    { "id": "control-temporal", "from": "control", "to": "temporal", "label": "start, Update, read history", "fromSide": "bottom", "toSide": "left" },
+    { "id": "workers-poll", "from": "workers", "to": "temporal", "label": "poll tasks, record results", "fromSide": "bottom", "toSide": "top" },
+    { "id": "adk-tools", "from": "adk-hosts", "to": "business", "label": "tools (HTTP)", "fromSide": "right", "toSide": "top" },
+    { "id": "worker-tools", "from": "workers", "to": "business", "label": "Activities (HTTP)", "fromSide": "right", "toSide": "bottom" },
+    { "id": "control-ledger", "from": "control", "to": "business", "label": "read ledger", "variant": "dashed" }
+  ],
+  "cards": [
+    { "dot": "violet", "title": "Same agent, two runtimes", "items": [
+      "agent.py: one LlmAgent, three tools, one approval policy",
+      "ADK side: model name and plain function tools",
+      "Temporal side: TemporalModel and activity_as_tool (GoogleAdkPlugin)"
+    ] },
+    { "dot": "rose", "title": "Real failures", "items": [
+      "Crash points call os._exit in the host or Worker, like kill -9",
+      "The supervisor only restarts processes, like Kubernetes",
+      "It never tells a restarted process what it was doing"
+    ] },
+    { "dot": "emerald", "title": "Where progress is recorded", "items": [
+      "ADK: session events, written by the host after each step",
+      "Temporal: event history, written by the Temporal Service when an Activity reports back",
+      "Business systems: what really happened, the ground truth"
+    ] }
+  ]
+}

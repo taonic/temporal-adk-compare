@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+.pytest_cache
+.archify
+**/__pycache__
+var
+doc
+tests

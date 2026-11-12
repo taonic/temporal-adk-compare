@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumable vs durable agent</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --border: #dde1e8;
+    --accent: #3b5bdb; --accent-text: #ffffff; --code-bg: #f1f3f6;
+    --ok: #2b8a3e; --ok-bg: #e6f4ea; --warn: #b35c00; --warn-bg: #fff3e0;
+    --bad: #c92a2a; --bad-bg: #fdecec; --info: #1c63b7; --info-bg: #e7f0fb; --idle: #6b7280; --idle-bg: #eef0f3;
+    --adk: #1a73e8; --tmp: #7048e8;
+    --t-kw: #a626a4; --t-str: #2b8a3e; --t-num: #b35c00; --t-com: #8a93a3; --t-def: #1c63b7; --t-deco: #b35c00; --t-bi: #0c7d9d;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12151b; --panel: #1b1f27; --text: #e4e7ec; --muted: #9aa3b2; --border: #2c323d;
+      --accent: #7c93f2; --accent-text: #0e1220; --code-bg: #232833;
+      --ok: #69db7c; --ok-bg: #1d3324; --warn: #ffb35c; --warn-bg: #3a2a16;
+      --bad: #ff8787; --bad-bg: #3b1d1d; --info: #74b0f5; --info-bg: #182a40; --idle: #9aa3b2; --idle-bg: #262b35;
+      --adk: #74a9f7; --tmp: #b197fc;
+      --t-kw: #d38bd2; --t-str: #8fd19e; --t-num: #ffb35c; --t-com: #7d8696; --t-def: #74b0f5; --t-deco: #ffb35c; --t-bi: #66d9e8;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12151b; --panel: #1b1f27; --text: #e4e7ec; --muted: #9aa3b2; --border: #2c323d;
+    --accent: #7c93f2; --accent-text: #0e1220; --code-bg: #232833;
+    --ok: #69db7c; --ok-bg: #1d3324; --warn: #ffb35c; --warn-bg: #3a2a16;
+    --bad: #ff8787; --bad-bg: #3b1d1d; --info: #74b0f5; --info-bg: #182a40; --idle: #9aa3b2; --idle-bg: #262b35;
+    --adk: #74a9f7; --tmp: #b197fc;
+    --t-kw: #d38bd2; --t-str: #8fd19e; --t-num: #ffb35c; --t-com: #7d8696; --t-def: #74b0f5; --t-deco: #ffb35c; --t-bi: #66d9e8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  a { color: var(--accent); }
+  button { font: inherit; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text);
+           padding: 5px 11px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  button.danger { color: var(--bad); }
+  button.small { padding: 2px 8px; font-size: 12px; }
+  button:disabled { opacity: .45; cursor: default; }
+  select { font: inherit; font-size: 12px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border);
+           background: var(--bg); color: var(--text); max-width: 100%; }
+  .muted { color: var(--muted); }
+  .chip { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+          background: var(--idle-bg); color: var(--idle); white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  .chip.info { background: var(--info-bg); color: var(--info); }
+
+  header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+           justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid var(--border);
+           background: linear-gradient(110deg, color-mix(in srgb, var(--adk) 12%, var(--panel)) 0%, var(--panel) 50%,
+                       color-mix(in srgb, var(--tmp) 12%, var(--panel)) 100%); }
+  header .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  header .logo { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+                 background: linear-gradient(135deg, var(--adk), var(--tmp)); color: #fff; }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 10px; border-radius: 999px;
+            border: 1px solid var(--border); background: var(--panel); cursor: pointer; user-select: none; }
+  .toggle .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); }
+  .toggle.on .dot { background: var(--ok); }
+  .toggle.on { border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
+  .toggle.warn-chip .dot { background: var(--warn); }
+  .toggle.warn-chip { border-color: color-mix(in srgb, var(--warn) 60%, var(--border)); color: var(--warn); }
+  .menu { position: relative; }
+  .menu > summary { list-style: none; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
+                    background: var(--panel); cursor: pointer; user-select: none; color: var(--text); }
+  .menu > summary::-webkit-details-marker { display: none; }
+  .menu > summary:hover, .menu[open] > summary { border-color: var(--accent); }
+  .menu-body { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; display: grid; gap: 6px; min-width: 230px;
+               padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel);
+               box-shadow: 0 8px 24px rgba(10, 14, 22, .14); }
+  .menu-body button { text-align: left; }
+  .menu-body .menu-note { font-size: 11px; color: var(--muted); }
+  .menu-body hr { border: 0; border-top: 1px solid var(--border); margin: 2px 0; width: 100%; }
+
+  .wrap { padding: 14px 20px 30px; display: grid; gap: 14px; }
+  @media (max-width: 700px) { .wrap { padding: 12px 16px 30px; } header { padding: 10px 16px; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+  h2 { font-size: 15px; margin: 0; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 6px; }
+
+  /* ADK vs Temporal claim cards, one pair per act */
+  .claim { --v: var(--warn); --vbg: var(--warn-bg); display: grid; gap: 6px; align-content: start; padding: 12px 16px 12px;
+           border-radius: 10px; border: 1px solid color-mix(in srgb, var(--v) 45%, var(--border)); border-left: 5px solid var(--v);
+           background: color-mix(in srgb, var(--vbg) 55%, var(--panel)); }
+  .claim.good { --v: var(--ok); --vbg: var(--ok-bg); }
+  .claim .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--c); }
+  .claim.adk { --c: var(--adk); } .claim.temporal { --c: var(--tmp); }
+  .claim p { margin: 0; font-size: 16px; line-height: 1.45; font-weight: 500; }
+  .claim mark { background: color-mix(in srgb, var(--v) 22%, transparent); color: inherit; font-weight: 700;
+                padding: 0 3px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .claim .src { font-size: 12px; color: var(--muted); }
+  .claim code { background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
+  /* The same comparison, per act, inside the player. */
+  .act-compare { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 1100px) { .act-compare { grid-template-columns: 1fr; } }
+  .claim.compact { padding: 7px 12px 8px; gap: 2px; border-left-width: 4px; }
+  .claim.compact .tag { font-size: 10.5px; }
+  .claim.compact p { font-size: 13.5px; font-weight: 400; }
+  .claim.compact mark { font-weight: 600; }
+  @media (max-width: 700px) { .claim p { font-size: 15px; } }
+
+  /* Scenario player */
+  .player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 18px; align-items: start;
+            border-left: 4px solid var(--accent); }
+  .acts { display: flex; flex-wrap: wrap; gap: 4px; grid-column: 1 / -1; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+  .acts button { border-color: transparent; background: none; color: var(--muted); padding: 3px 10px; font-size: 13px; }
+  .acts button:hover { color: var(--text); border-color: var(--border); }
+  .acts button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .step-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
+  .caption { font-size: 14px; max-width: 110ch; }
+  .caption code { background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
+  /* Wrap-up: the four results in one table, amber for ADK and green for Temporal, like the cards. */
+  .caption table.wrap-table { margin: 10px 0 4px; font-size: 13.5px; border-collapse: separate; border-spacing: 0 4px; }
+  .wrap-table th, .wrap-table td { border: 0; padding: 7px 10px; vertical-align: top; line-height: 1.4; }
+  .wrap-table tr > th:first-child { color: var(--text); font-size: 13px; white-space: nowrap; width: 1%; }
+  .wrap-table th span { color: var(--muted); font-weight: 400; font-size: 11.5px; }
+  .wrap-table th.adk { color: var(--adk); font-size: 13px; } .wrap-table th.tmp { color: var(--tmp); font-size: 13px; }
+  .wrap-table td.adk { background: color-mix(in srgb, var(--warn-bg) 55%, var(--panel)); border-left: 4px solid var(--warn); }
+  .wrap-table td.tmp { background: color-mix(in srgb, var(--ok-bg) 55%, var(--panel)); border-left: 4px solid var(--ok); }
+  .wrap-table td.tmp b { color: var(--ok); }
+  .caption .wrap-note { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+  .player .nav { display: grid; gap: 6px; min-width: 190px; }
+  .player .nav-row { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+  .player .progress { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .player .waiting { font-size: 12px; color: var(--warn); margin-top: 6px; }
+  .player .proves { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 700px) { .player { grid-template-columns: 1fr; } }
+
+  /* Two columns */
+  .sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  @media (max-width: 1100px) { .sides { grid-template-columns: 1fr; } }
+  .side { border-top: 4px solid var(--c); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; }
+  .side.adk { --c: var(--adk); }
+  .side.temporal { --c: var(--tmp); }
+  .side-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: start; }
+  .side-head h2 { color: var(--c); }
+  .side-head .stack { font-size: 11.5px; color: var(--muted); }
+  .side-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+  .procs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .crash { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .crash.armed select { border-color: var(--bad); color: var(--bad); font-weight: 600; }
+  .proc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; border-radius: 8px;
+          border: 1px solid var(--border); font-size: 12px; }
+  .proc .state { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); }
+  .proc.running .state { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
+  .proc.crashed .state, .proc.restarting .state { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-bg); }
+  .proc.crashed { border-color: var(--bad); }
+  .side-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
+  @media (max-width: 640px) { .side-body { grid-template-columns: 1fr; } }
+
+  /* Flow diagram */
+  .flow svg { display: block; width: 100%; height: auto; }
+  .flow .node { cursor: pointer; }
+  .flow .node:focus { outline: none; }
+  .flow .node rect.box { fill: var(--panel); stroke: var(--border); stroke-width: 1.2; transition: fill .3s, stroke .3s; }
+  .flow .node:hover rect.box, .flow .node:focus-visible rect.box { stroke: var(--accent); stroke-width: 2; }
+  .flow .node text { fill: var(--text); font: 600 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .flow .node text.sub { fill: var(--muted); font: 400 11px system-ui, sans-serif; }
+  .flow .node.done rect.box { fill: var(--ok-bg); stroke: var(--ok); }
+  .flow .node.active rect.box { fill: var(--info-bg); stroke: var(--info); animation: pulse 1.1s ease-in-out infinite; }
+  .flow .node.limbo rect.box { fill: var(--warn-bg); stroke: var(--warn); stroke-dasharray: 5 3; stroke-width: 2; }
+  .flow .node.dup rect.box { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 2.2; }
+  .flow .node.waiting rect.box { fill: var(--warn-bg); stroke: var(--warn); }
+  .flow .node.stalled rect.box { fill: var(--idle-bg); stroke: var(--bad); stroke-dasharray: 4 3; }
+  .flow .node.skipped rect.box { fill: var(--idle-bg); stroke-dasharray: 3 3; }
+  .flow .node.off { opacity: .35; }
+  .flow .node.focus rect.box { stroke: var(--accent); stroke-width: 2.4; }
+  .flow .edge { stroke: var(--border); stroke-width: 2; fill: none; }
+  .flow .edge.lit { stroke: var(--ok); }
+  .flow .badge rect { fill: var(--idle-bg); stroke: var(--border); }
+  .flow .badge text { font: 700 10.5px system-ui, sans-serif; fill: var(--muted); }
+  .flow .badge.money rect { fill: var(--ok-bg); stroke: var(--ok); } .flow .badge.money text { fill: var(--ok); }
+  .flow .badge.dup rect { fill: var(--bad); stroke: var(--bad); } .flow .badge.dup text { fill: #fff; }
+  .flow .badge.rec rect { fill: var(--ok-bg); stroke: var(--ok); } .flow .badge.rec text { fill: var(--ok); }
+  .flow .badge.norec rect { fill: var(--warn-bg); stroke: var(--warn); } .flow .badge.norec text { fill: var(--warn); }
+  .flow .badge.attempt rect { fill: var(--info-bg); stroke: var(--info); } .flow .badge.attempt text { fill: var(--info); }
+  .flow .bolt text { font: 700 11px system-ui, sans-serif; fill: var(--bad); }
+  .flow .bolt rect { fill: var(--bad-bg); stroke: var(--bad); stroke-dasharray: 3 2; }
+  @keyframes pulse { 50% { stroke-width: 2.6; } }
+  @media (prefers-reduced-motion: reduce) { .flow .node.active rect.box { animation: none; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); padding: 0 4px; margin-bottom: -4px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; border: 1.5px solid; }
+
+  /* Right-hand panels */
+  .panels { display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .slot { display: contents; }
+  .panel { border: 1px solid var(--border); border-radius: 8px; padding: 10px; min-width: 0; }
+  .panel.clickable { cursor: pointer; }
+  .panel.clickable:hover { border-color: var(--accent); }
+  .panel.alert { border-color: var(--warn); background: color-mix(in srgb, var(--warn-bg) 60%, var(--panel)); }
+  .panel.good { border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
+  /* A weakness of the runtime: amber always, red while it is actually hurting (work stranded). */
+  .panel.weak { border-color: color-mix(in srgb, var(--warn) 60%, var(--border)); background: color-mix(in srgb, var(--warn-bg) 45%, var(--panel)); }
+  .panel.weak .big { color: var(--warn); }
+  .panel.weak.hurting { border-color: var(--bad); background: color-mix(in srgb, var(--bad-bg) 70%, var(--panel)); }
+  .panel.weak.hurting .big, .panel.weak.hurting .line.strong { color: var(--bad); }
+  .panel.weak.hurting .line.strong { font-weight: 600; }
+  .panel.weak .line.twice { color: var(--bad); }
+  .panel .big { font-weight: 700; font-size: 13.5px; }
+  .panel-head { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .panel-head .muted { font-size: 11px; white-space: nowrap; }
+  .panel .line { font-size: 12px; margin-top: 4px; }
+  .records { max-height: 260px; overflow: auto; font-size: 11.5px; margin-top: 2px; }
+  .rec { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 4px; padding: 2px 0; border-bottom: 1px dashed var(--border); }
+  .rec .n { color: var(--muted); text-align: right; }
+  .rec .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rec.hl .t b { color: var(--ok); }
+  .rec.bad .t b { color: var(--bad); }
+  .rec.new { animation: flash 1.5s ease-out; }
+  @keyframes flash { 0% { background: var(--info-bg); } 100% { background: transparent; } }
+  .countdown { font-variant-numeric: tabular-nums; font-weight: 700; }
+  .log { background: var(--code-bg); border-radius: 6px; padding: 8px; max-height: 170px; overflow: auto; font-size: 11px;
+         line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .log .crash { color: var(--bad); font-weight: 700; }
+  .log .sys { color: var(--muted); }
+  .log .good { color: var(--ok); }
+  details summary { cursor: pointer; font-size: 12px; color: var(--muted); }
+  details.logbox > summary { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  details.logbox > summary .last { margin-left: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+  details.logbox > summary .last.crash { color: var(--bad); font-weight: 700; }
+  details.logbox[open] > summary .last { display: none; }
+
+  /* Business systems */
+  .biz-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
+  .biz-grid.no-esc { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 1100px) { .biz-grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 640px) { .biz-grid { grid-template-columns: 1fr; } }
+  .totals { display: flex; flex-wrap: wrap; gap: 8px; }
+  .total { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; }
+  .total.bad { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); font-weight: 700; }
+  .total.ok { border-color: var(--ok); background: var(--ok-bg); color: var(--ok); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  td, th { text-align: left; padding: 3px 5px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; }
+  tr.dup td { background: var(--bad-bg); color: var(--bad); font-weight: 600; }
+  tr.replayed td { color: var(--muted); }
+  .table-wrap { overflow-x: auto; }
+  .side-tag { font-weight: 700; font-size: 11px; }
+  .side-tag.adk { color: var(--adk); } .side-tag.temporal { color: var(--tmp); }
+  .notes { font-size: 12px; color: var(--muted); max-height: 120px; overflow: auto; }
+
+  /* Dialog */
+  dialog { border: 1px solid var(--border); border-radius: 12px; padding: 0; width: min(980px, calc(100vw - 32px));
+           max-height: calc(100vh - 48px); background: var(--panel); color: var(--text); }
+  dialog::backdrop { background: rgba(10, 14, 22, .55); }
+  dialog .inner { padding: 16px 18px; }
+  dialog .head { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 8px; }
+  .tabs { display: flex; gap: 6px; margin: 6px 0 12px; }
+  .tabs button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+  .part { margin-bottom: 14px; }
+  .part-title { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; margin-bottom: 4px; }
+  pre.code { background: var(--code-bg); padding: 10px; border-radius: 6px; overflow-x: auto; margin: 0; line-height: 1.45; }
+  pre.code .ln { display: inline-block; width: 3.2em; color: var(--muted); user-select: none; opacity: .6; }
+  .t-kw { color: var(--t-kw); } .t-str { color: var(--t-str); } .t-num { color: var(--t-num); }
+  .t-com { color: var(--t-com); font-style: italic; } .t-def { color: var(--t-def); font-weight: 600; }
+  .t-deco { color: var(--t-deco); } .t-bi { color: var(--t-bi); }
+  .what { background: var(--info-bg); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 13px; margin-bottom: 10px; }
+  pre.json { background: var(--code-bg); padding: 8px; border-radius: 6px; overflow-x: auto; margin: 4px 0 10px; font-size: 11.5px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+    </div>
+    <div>
+      <h1>Resumable agent vs durable agent</h1>
+      <div class="sub">One ADK agent, the same crashes, two runtimes. Every process is real and every crash is a real <code>kill -9</code>.</div>
+    </div>
+  </div>
+  <div class="controls" id="controls"></div>
+</header>
+
+<div class="wrap">
+  <section class="card player" id="player" aria-live="polite"></section>
+  <div class="legend" aria-label="Legend">
+    <span><i style="border-color:var(--ok);background:var(--ok-bg)"></i>done · result recorded</span>
+    <span><i style="border-color:var(--warn);background:var(--warn-bg);border-style:dashed"></i>side effect done, result not recorded</span>
+    <span><i style="border-color:var(--bad);background:var(--bad-bg)"></i>side effect repeated</span>
+    <span>Click any step for its code and what was persisted</span>
+  </div>
+  <div class="sides">
+    <section class="card side adk" id="side-adk"></section>
+    <section class="card side temporal" id="side-temporal"></section>
+  </div>
+  <section class="card" id="business"></section>
+</div>
+
+<dialog id="node-dialog" aria-labelledby="node-title"><div class="inner"></div></dialog>
+
+<script>
+"use strict";
+
+// ---- Tiny DOM helper ---------------------------------------------------------
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (k === "html") el.innerHTML = v;
+    else el.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+const SVG = "http://www.w3.org/2000/svg";
+function s(tag, attrs, ...children) {
+  const el = document.createElementNS(SVG, tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v);
+  }
+  for (const c of children.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return el;
+}
+// Replace a region's content only when it changed. The page re-renders on every
+// poll (700ms); swapping an unchanged button between mousedown and mouseup
+// swallows the click, so unchanged regions keep their elements.
+function patch(root, ...children) {
+  const next = document.createElement("div");
+  next.append(...children.flat(Infinity).filter((c) => c != null && c !== false));
+  if (next.innerHTML === root.innerHTML) return false;
+  root.replaceChildren(...next.childNodes);
+  return true;
+}
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
+  let body = null;
+  try { body = await res.json(); } catch {}
+  return { status: res.status, body };
+}
+const post = (path, body) => api(path, { method: "POST", body: JSON.stringify(body || {}) });
+const money = (cents) => `$${(cents / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+// ---- State ------------------------------------------------------------------
+let state = null;
+let scenarios = [];
+let actIndex = Number(store.get("act") || 0);
+let stepIndex = -1;            // -1 = act not started yet
+let autoplay = false;
+let busy = false;
+let stepMark = {};             // snapshot when the current step started, for waitFor predicates
+const seen = { adk: new Set(), temporal: new Set() };
+
+const NODES = [
+  { id: "request", label: "customer request", sub: "Refund order …" },
+  { id: "decide", label: "LLM decides", sub: "refund_agent" },
+  { id: "approval", label: "manager approval", sub: "require_confirmation" },
+  { id: "refund_payment", label: "refund_payment", sub: "payment provider" },
+  { id: "record_refund", label: "record_refund", sub: "order system" },
+  { id: "notify_customer", label: "notify_customer", sub: "email" },
+  { id: "done", label: "done", sub: "" },
+];
+const SIDES = {
+  adk: { title: "Google ADK", stack: "ResumabilityConfig(is_resumable=True) · SqliteSessionService",
+         procs: ["adk-a", "adk-b"] },
+  temporal: { title: "Temporal + ADK plugin", stack: "same agent · GoogleAdkPlugin · Activities · event history",
+              procs: ["worker-a", "worker-b"] },
+};
+const CRASH_LABEL = { refund_charged: "crash inside the tool", refund_returned: "crash after it returns", before_notify: "crash before notify", batch_partial: "crash mid-batch" };
+// How many calls of each tool a run should make: one per line item for the refund and its record.
+function expected(name) {
+  const items = state.run && state.run.line_items;
+  return items && items.length && name !== "notify_customer" ? items.length : 1;
+}
+
+// ---- Deriving each side's picture from the raw records ----------------------
+function businessOps(side) {
+  const b = state.business || {};
+  const mine = (rows) => (rows || []).filter((r) => r.side === side);
+  const refunds = mine(b.refunds);
+  return {
+    refund_payment: { moved: refunds.filter((r) => !r.replayed).length, replayed: refunds.filter((r) => r.replayed).length },
+    record_refund: { moved: mine(b.order_refunds).length, replayed: 0 },
+    notify_customer: { moved: mine(b.notifications).length, replayed: 0 },
+    escalations: mine(b.escalations).length,
+  };
+}
+
+function adkPicture() {
+  const adk = state.adk || {};
+  const ev = adk.events || [];
+  // Parallel calls share one event, so count the calls and results inside each event.
+  const calls = (name) => ev.flatMap((e) => (e.calls || []).filter((c) => c.name === name));
+  // While a tool waits for confirmation, ADK records a placeholder result saying so. It is not the tool's result.
+  const placeholder = (r) => r.data && typeof r.data.error === "string" && /requires confirmation/.test(r.data.error);
+  const responses = (name) => ev.flatMap((e) => (e.responses || []).filter((r) => r.name === name && !placeholder(r)));
+  return {
+    status: adk.status,
+    started: (name) => calls(name).length > 0,
+    recorded: (name) => new Set(responses(name).map((r) => r.call_id)).size,
+    rejected: (name) => responses(name).some((r) => r.data && r.data.error),
+    attempts: () => 0,
+    // In-process retries leave no event; the API reads them from the live host's log.
+    modelRetry: adk.retrying || null,
+    decided: ev.some((e) => e.kind === "function_call" || e.kind === "final_text"),
+    awaiting: adk.awaiting,
+    approvalAnswered: ev.some((e) => e.kind === "approval_answer"),
+    approved: ev.some((e) => e.kind === "approval_answer" && e.data && e.data.confirmed),
+    timerFired: false,
+    done: adk.status === "completed",
+    records: ev,
+  };
+}
+
+function temporalPicture() {
+  const t = state.temporal || {};
+  const hist = t.history || [];
+  const pending = t.pending || [];
+  const of = (type, name) => hist.filter((e) => e.type === type && e.activity === name);
+  return {
+    status: t.status,
+    started: (name) => of("ActivityTaskScheduled", name).length > 0,
+    recorded: (name) => of("ActivityTaskCompleted", name).length,
+    rejected: () => false,
+    // A retrying Activity's attempt count lives on the pending Activity until it completes.
+    attempts: (name) => Math.max(0, ...of("ActivityTaskStarted", name).map((e) => e.attempt || 1),
+                                 ...pending.filter((a) => a.activity === name).map((a) => a.attempt)),
+    modelRetry: pending.find((a) => a.activity === "invoke_model" && a.attempt > 1) || null,
+    decided: hist.some((e) => e.activity === "invoke_model" && e.type === "ActivityTaskCompleted"),
+    awaiting: t.awaiting,
+    approvalAnswered: hist.some((e) => e.type === "TimerFired" || e.type === "WorkflowExecutionUpdateAccepted"),
+    approved: hist.some((e) => e.type === "WorkflowExecutionUpdateAccepted" && e.data === true),
+    timerFired: hist.some((e) => e.type === "TimerFired"),
+    done: t.status === "COMPLETED",
+    records: hist,
+  };
+}
+
+function picture(side) { return side === "adk" ? adkPicture() : temporalPicture(); }
+
+function nodeStates(side) {
+  const p = picture(side);
+  const ops = businessOps(side);
+  const run = state.run;
+  const hasApproval = run && run.approval_threshold_cents != null;
+  const out = {};
+  const items = run && run.line_items && run.line_items.length ? ` in ${run.line_items.length} line items` : "";
+  out.request = run ? { cls: "done", sub: `Refund ${run.order_id} · ${money(run.amount_cents)}${items}` } : { cls: "", sub: "no run yet" };
+  if (!run) out.decide = { cls: "" };
+  else if (p.decided) out.decide = { cls: "done", sub: items ? `decided: ${run.line_items.length} refunds in one turn` : "decided: refund" };
+  else if (p.modelRetry) out.decide = { cls: "active", sub: side === "adk"
+    ? `model unavailable · in-process retry ${p.modelRetry.attempt} of ${p.modelRetry.attempts}`
+    : `model unavailable · attempt ${p.modelRetry.attempt}, retrying` };
+  else if (side === "adk" && p.status === "unfinished" && !adkHostBusy()) out.decide = { cls: "stalled", sub: "model call never finished · invocation stopped" };
+  else out.decide = { cls: "active", sub: "thinking…" };
+  if (!hasApproval) out.approval = { cls: "off", sub: "no approval policy this run" };
+  else if (p.awaiting) out.approval = { cls: "waiting", sub: "waiting for a manager" };
+  else if (p.timerFired) out.approval = { cls: "skipped", sub: "deadline passed → denied" };
+  else if (p.approvalAnswered) out.approval = { cls: p.approved ? "done" : "skipped", sub: p.approved ? "approved" : "denied" };
+  else out.approval = { cls: p.started("refund_payment") ? "active" : "", sub: "over $250 needs approval" };
+  for (const name of ["refund_payment", "record_refund", "notify_customer"]) {
+    const op = ops[name];
+    const n = expected(name);
+    const rec = p.recorded(name);
+    const st = { moved: op.moved, replayed: op.replayed, recorded: rec, attempts: p.attempts(name), expected: n };
+    if (op.moved > n) st.cls = "dup";
+    else if (rec >= n && p.rejected(name)) st.cls = "skipped";
+    else if (rec >= n) st.cls = "done";
+    else if (op.moved > rec) st.cls = "limbo";
+    else if (p.started(name)) st.cls = "active";
+    else st.cls = "";
+    if (st.cls === "active" && side === "adk" && p.status === "unfinished" && !adkHostBusy()) st.cls = "stalled";
+    if (name === "refund_payment" && hasApproval && p.awaiting && !op.moved) st.cls = "waiting";
+    if (name === "refund_payment" && hasApproval && p.approvalAnswered && !p.approved && !op.moved) st.cls = "skipped";
+    if (name === "record_refund" && hasApproval && p.approvalAnswered && !p.approved) st.cls = "skipped";
+    st.sub = st.cls === "dup" ? (n > 1 ? `side effect ran ${op.moved}× for ${n} items` : `side effect ran ${op.moved}×`)
+           : st.cls === "limbo" ? (n > 1 ? `${op.moved} of ${n} done · ${rec ? rec + " recorded" : "none recorded"}` : "side effect done · result NOT recorded")
+           : st.cls === "done" ? (n > 1 ? `done · ${n} results recorded` : "done · result recorded")
+           : st.cls === "active" ? (n > 1 && rec ? `${rec} of ${n} recorded · running…` : "running…") : st.cls === "skipped" ? "skipped"
+           : st.cls === "waiting" ? "held until a manager decides"
+           : st.cls === "stalled" ? "called, never finished: the host died" : NODES.find((n) => n.id === name).sub;
+    out[name] = st;
+  }
+  out.done = p.done ? { cls: "done", sub: "completed" } : { cls: "", sub: run ? statusText(side, p) : "" };
+  return out;
+}
+
+function statusText(side, p) {
+  if (side === "adk") return { unfinished: "invocation unfinished", awaiting_approval: "paused for approval", not_started: "not started" }[p.status] || "";
+  return p.status ? p.status.toLowerCase() : "";
+}
+
+// ---- Rendering: header controls ------------------------------------------------
+function renderControls() {
+  const root = document.getElementById("controls");
+  const st = state.settings;
+  const tog = (on, label, title, fn) => h("button", { class: `toggle ${on ? "on" : ""}`, title, onclick: fn, "aria-pressed": String(on) },
+    h("span", { class: "dot" }), `${label}: ${on ? "on" : "off"}`);
+  // Manual controls live in a menu: the scenario player normally drives the demo.
+  const act = (fn) => () => { menuOpen = false; fn().then(refresh); };
+  const outage = state.model_outage_left > 0;
+  patch(root, ...[
+    tog(st.use_idempotency_key, "Idempotency key", "Tools send Idempotency-Key: <run>:<function call id> (new runs)",
+        () => post("/api/settings", { use_idempotency_key: !st.use_idempotency_key }).then(refresh)),
+    tog(st.auto_restart, "Auto-restart", "The supervisor restarts a dead process after 2s, like Kubernetes",
+        () => post("/api/settings", { auto_restart: !st.auto_restart }).then(refresh)),
+    outage
+      ? h("button", { class: "toggle on warn-chip", title: "Every model call fails with a 429 until the outage ends. Click to end it now.",
+                      onclick: () => post("/api/model-outage", { seconds: 0 }).then(refresh) }, h("span", { class: "dot" }), `Model outage: ${Math.ceil(state.model_outage_left)}s left`)
+      : null,
+    h("details", { class: "menu", open: menuOpen, ontoggle: (e) => { menuOpen = e.target.open; } },
+      h("summary", {}, "Manual ▾"),
+      h("div", { class: "menu-body" },
+        h("div", { class: "menu-note" }, "Start a run on both sides"),
+        h("button", { onclick: act(() => post("/api/runs", {})), title: "Start a $500 refund on both sides" }, "Refund $500"),
+        h("button", { onclick: act(() => post("/api/runs", { approval: true })), title: "With the approval policy: over $250 needs a manager within 20s" }, "Refund $500 + approval"),
+        h("button", { onclick: act(() => post("/api/runs", { line_items: [20000, 15000, 15000] })), title: "Three line items: the model asks for three refunds in one turn" }, "Refund 3 items"),
+        h("hr"),
+        outage ? null : h("button", { title: "Every model call fails with a 429 for 20s, on both sides", onclick: act(() => post("/api/model-outage", { seconds: 20 })) }, "Model outage 20s"),
+        h("button", { onclick: act(() => post("/api/reset")) }, "Reset everything"),
+        h("hr"),
+        h("a", { href: state.temporal_ui, target: "_blank", rel: "noopener", style: "font-size:12px" }, "Temporal UI ↗"))),
+  ].filter(Boolean));
+}
+let menuOpen = false;
+document.addEventListener("click", (e) => {
+  if (menuOpen && !e.target.closest(".menu")) { menuOpen = false; const m = document.querySelector(".menu"); if (m) m.open = false; }
+});
+
+// ---- Rendering: scenario player ----------------------------------------------
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+function currentAct() { return scenarios[actIndex]; }
+function currentStep() { const a = currentAct(); return a && stepIndex >= 0 ? a.steps[stepIndex] : null; }
+
+const PREDICATES = {
+  temporal_done: (st) => st.temporal && st.temporal.status === "COMPLETED",
+  adk_done: (st) => st.adk && st.adk.status === "completed",
+  adk_unfinished: (st) => {
+    const a = st.processes.find((p) => p.key === "adk-a");
+    return st.adk && st.adk.status === "unfinished" && a.state === "running" && a.restarts > (stepMark.adkRestarts ?? 0);
+  },
+  both_awaiting: (st) => st.adk && st.adk.status === "awaiting_approval" && st.temporal && st.temporal.awaiting,
+  deadline_passed: (st) => st.adk && st.adk.awaiting && st.now > st.adk.awaiting.deadline_at + 1,
+  adk_stopped: (st) => st.adk && st.adk.status === "unfinished" && !adkHostBusy(),
+  outage_over: (st) => !st.model_outage_left,
+  both_retrying: (st) => st.adk && st.adk.retrying && st.adk.retrying.attempt >= 2 && st.temporal
+    && (st.temporal.pending || []).some((a) => a.activity === "invoke_model" && a.attempt >= 2),
+};
+const PREDICATE_TEXT = {
+  temporal_done: "Temporal finishing", adk_done: "ADK finishing", adk_unfinished: "ADK host A to crash and restart",
+  both_awaiting: "both sides to wait for a manager", deadline_passed: "the approval deadline to pass",
+  adk_stopped: "the ADK invocation to stop", outage_over: "the model outage to end",
+  both_retrying: "both sides to retry the model",
+};
+function pendingWaits() {
+  const step = currentStep();
+  if (!step || !step.waitFor || !state) return [];
+  return step.waitFor.filter((p) => !PREDICATES[p](state));
+}
+
+async function goTo(index) {
+  const act = currentAct();
+  if (!act || busy || index < 0 || index >= act.steps.length) return;
+  busy = true;
+  stepIndex = index;
+  const a = state && state.processes.find((p) => p.key === "adk-a");
+  stepMark = { adkRestarts: a ? a.restarts : 0 };
+  renderPlayer();
+  try {
+    for (const action of act.steps[index].actions || []) {
+      const res = await post(action.post, action.body);
+      if (res.status >= 400) console.warn(action.post, res.body);
+      if (action.post === "/api/reset") { seen.adk.clear(); seen.temporal.clear(); }
+    }
+  } finally {
+    busy = false;
+    await refresh();
+  }
+}
+
+function claim(cls, tag, html, source) {
+  return h("div", { class: `claim compact ${cls}` }, h("div", { class: "tag" }, tag), h("p", { html }),
+    source ? h("div", { class: "src" }, "Source: ", h("a", { href: source.href, target: "_blank", rel: "noopener",
+                                                            title: "Opens the docs with the quoted sentence highlighted" }, `${source.label} ↗`)) : null);
+}
+
+function renderPlayer() {
+  const root = document.getElementById("player");
+  const act = currentAct();
+  if (!act) { patch(root, h("p", { class: "muted" }, "Loading scenarios…")); return; }
+  const step = currentStep();
+  const waits = pendingWaits();
+  const atEnd = stepIndex >= act.steps.length - 1;
+  const nextLabel = stepIndex < 0 ? `Start ${act.short}` : atEnd ? "Done" : "Next →";
+  patch(root, 
+    h("div", { class: "acts", role: "group", "aria-label": "Acts" }, scenarios.map((a, i) =>
+      h("button", { type: "button", "aria-pressed": String(i === actIndex), onclick: () => {
+        actIndex = i; stepIndex = -1; autoplay = false; store.set("act", String(i)); renderAll();
+      } }, a.title))),
+    act.compare ? h("div", { class: "act-compare", "aria-label": `${act.short}: ADK vs Temporal` },
+      claim("adk", "Google ADK", act.compare.adk, act.compare.adk_source),
+      claim("temporal good", "Temporal", act.compare.temporal, act.compare.temporal_source)) : null,
+    h("div", {},
+      step ? [
+        h("div", { class: "step-title" }, step.title),
+        h("div", { class: "caption", html: step.caption }),
+        waits.length ? h("div", { class: "waiting" }, `Waiting for ${waits.map((w) => PREDICATE_TEXT[w]).join(" and ")}…`) : null,
+      ] : [
+        h("div", { class: "step-title" }, act.title),
+        h("div", { class: "caption muted" }, `${plural(act.steps.length, "step")}. Press Start (or →). Each step runs its actions when you reach it.`),
+        act.proves && act.proves.length ? h("div", { class: "proves" }, "Comparison rows this act tests: ", act.proves.join(" · ")) : null,
+      ],
+    ),
+    h("div", { class: "nav" },
+      h("button", { class: "primary", disabled: busy || atEnd, onclick: () => goTo(stepIndex + 1) }, nextLabel),
+      h("div", { class: "nav-row" },
+        h("button", { class: "small", title: "Back one step (caption only; nothing is undone)", "aria-label": "Back",
+                      disabled: busy || stepIndex <= 0, onclick: () => { stepIndex -= 1; renderPlayer(); } }, "←"),
+        h("span", { class: "progress" }, stepIndex < 0 ? plural(act.steps.length, "step") : `step ${stepIndex + 1} of ${act.steps.length}`),
+        h("button", { class: "small", "aria-pressed": String(autoplay), title: "Advance 6s after each step's outcome arrives",
+                      onclick: () => { autoplay = !autoplay; renderPlayer(); } }, autoplay ? "⏸ Auto" : "▶ Auto")),
+    ),
+  );
+}
+
+let autoTimer = 0;
+function maybeAutoplay() {
+  if (!autoplay || busy) return;
+  const act = currentAct();
+  if (!act || stepIndex >= act.steps.length - 1) { autoplay = false; return; }
+  if (pendingWaits().length) return;
+  if (autoTimer) return;
+  autoTimer = setTimeout(() => { autoTimer = 0; if (autoplay && !pendingWaits().length) goTo(stepIndex + 1); }, 6000);
+}
+
+// ---- Rendering: a side ----------------------------------------------------------
+function renderSide(side) {
+  const root = document.getElementById(`side-${side}`);
+  const meta = SIDES[side];
+  const p = picture(side);
+  const statusChip = !state.run ? h("span", { class: "chip" }, "idle")
+    : p.done ? h("span", { class: "chip ok" }, "completed")
+    : p.awaiting ? h("span", { class: "chip warn" }, "waiting for approval")
+    : side === "adk" && p.status === "unfinished" && !adkHostBusy() ? h("span", { class: "chip bad" }, "unfinished · nobody working on it")
+    : h("span", { class: "chip info" }, "running");
+  if (!root.firstChild) {
+    root.append(h("div", { class: "side-head" }), h("div", { class: "side-bar" }),
+      h("div", { class: "side-body" }, h("div", { class: "flow" }),
+        h("div", { class: "panels" }, h("div", { class: "slot approval" }), h("div", { class: "slot recovery" }), h("div", { class: "slot persisted" }))),
+      h("div", { class: "slot logs" }));
+  }
+  const part = (sel) => root.querySelector(sel);
+  patch(part(".side-head"), h("div", {}, h("h2", {}, meta.title), h("div", { class: "stack mono" }, meta.stack)), statusChip);
+  patch(part(".side-bar"), renderProcs(side), renderCrashSelect(side));
+  patch(part(".flow"), renderFlow(side));
+  patch(part(".slot.approval"), renderApproval(side, p));
+  patch(part(".slot.recovery"), renderRecovery(side, p));
+  patch(part(".slot.persisted"), renderPersistence(side, p));
+  if (patch(part(".slot.logs"), renderLogBox(side))) {
+    const log = root.querySelector(".log");
+    if (log) log.scrollTop = log.scrollHeight;
+  }
+}
+
+function adkHostBusy() {
+  if (state.adk && state.adk.retrying) return true;
+  const ev = (state.adk && state.adk.events) || [];
+  if (!ev.length) return false;
+  const last = ev[ev.length - 1].ts;
+  const alive = state.processes.filter((p) => p.side === "adk" && p.state === "running");
+  // A live host that wrote an event in the last few seconds is still working.
+  return alive.length > 0 && state.now - last < 4;
+}
+
+function renderProcs(side) {
+  return h("div", { class: "procs" }, SIDES[side].procs.map((key) => {
+    const p = state.processes.find((x) => x.key === key);
+    const running = p.state === "running";
+    // The dot shows "running"; spell out only the states worth noticing.
+    const label = { running: "", stopped: "stopped", crashed: `crashed (exit ${p.exit_code})`, restarting: "restarting…" }[p.state];
+    const extra = [label, p.restarts ? `↻ ${p.restarts}` : ""].filter(Boolean).join(" · ");
+    return h("span", { class: `proc ${p.state}`, title: `${p.label}: ${p.state}${p.restarts ? `, restarted ${p.restarts}×` : ""}` }, h("span", { class: "state" }),
+      h("span", {}, h("b", {}, p.label), extra ? [" ", h("span", { class: "muted" }, extra)] : null),
+      running ? h("button", { class: "small danger", title: "SIGKILL this process", onclick: () => post(`/api/processes/${key}/kill`).then(refresh) }, "kill -9")
+              : h("button", { class: "small", onclick: () => post(`/api/processes/${key}/start`).then(refresh) }, "start"));
+  }));
+}
+
+const NODE_X = 14, NODE_W = 370, NODE_H = 46, GAP = 22, TOP = 8;
+function renderFlow(side) {
+  const ns = nodeStates(side);
+  const armed = state.faults[side];
+  const focus = (currentStep() && currentStep().focus) || [];
+  const height = TOP + NODES.length * (NODE_H + GAP);
+  const svg = s("svg", { viewBox: `0 0 ${NODE_X + NODE_W + 92} ${height}`, role: "img", "aria-label": `${side} flow` });
+  NODES.forEach((n, i) => {
+    const y = TOP + i * (NODE_H + GAP);
+    if (i > 0) {
+      const prevDone = ns[NODES[i - 1].id].cls === "done";
+      svg.append(s("line", { class: `edge ${prevDone ? "lit" : ""}`, x1: NODE_X + 40, x2: NODE_X + 40, y1: y - GAP, y2: y }));
+    }
+  });
+  NODES.forEach((n, i) => {
+    const y = TOP + i * (NODE_H + GAP);
+    const st = ns[n.id] || {};
+    const g = s("g", { class: `node ${st.cls || ""} ${focus.includes(n.id) ? "focus" : ""}`, tabindex: "0", role: "button",
+                       "aria-label": `${n.label}: ${st.sub || ""}. Show code`,
+                       onclick: () => openNode(side, n.id), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNode(side, n.id); } } });
+    g.append(s("rect", { class: "box", x: NODE_X, y, width: NODE_W, height: NODE_H, rx: 8 }));
+    g.append(s("text", { x: NODE_X + 12, y: y + 19 }, n.label));
+    g.append(s("text", { class: "sub", x: NODE_X + 12, y: y + 36 }, st.sub || n.sub));
+    // Badges, right to left
+    let bx = NODE_X + NODE_W - 8;
+    const badge = (cls, text) => {
+      const w = 9 + text.length * 6.3;
+      bx -= w;
+      g.append(s("g", { class: `badge ${cls}` }, s("rect", { x: bx, y: y + 6, width: w, height: 17, rx: 8.5 }),
+        s("text", { x: bx + w / 2, y: y + 18.5, "text-anchor": "middle" }, text)));
+      bx -= 4;
+    };
+    if (st.moved != null && st.moved > 0) {
+      const over = st.moved > (st.expected || 1);
+      if (n.id === "refund_payment") badge(over ? "dup" : "money", `$ moved ×${st.moved}`);
+      else badge(over ? "dup" : "money", `ran ×${st.moved}`);
+    }
+    if (st.replayed) badge("rec", `deduped ×${st.replayed}`);
+    if (st.attempts > 1) badge("attempt", `attempt ${st.attempts}`);
+    svg.append(g);
+    // Crash markers
+    const bolt = (yy, text) => svg.append(s("g", { class: "bolt" },
+      s("rect", { x: NODE_X + NODE_W + 6, y: yy - 9, width: 82, height: 18, rx: 4 }),
+      s("text", { x: NODE_X + NODE_W + 12, y: yy + 4 }, `⚡ ${text}`)));
+    if (armed === "refund_charged" && n.id === "refund_payment") bolt(y + NODE_H / 2, "inside");
+    if (armed === "refund_returned" && n.id === "refund_payment") bolt(y + NODE_H + GAP / 2, "after return");
+    if (armed === "before_notify" && n.id === "notify_customer") bolt(y - GAP / 2, "before");
+    if (armed === "batch_partial" && n.id === "refund_payment") bolt(y + NODE_H / 2, "mid-batch");
+  });
+  return svg;
+}
+
+function renderApproval(side, p) {
+  const run = state.run;
+  if (!run || run.approval_threshold_cents == null) return null;
+  const where = side === "adk" ? "Timer: an asyncio task in the ADK host's memory" : "Timer: on the Temporal Service (TimerStarted)";
+  const escalated = businessOps(side).escalations;
+  if (p.awaiting) {
+    const left = Math.round(p.awaiting.deadline_at - state.now);
+    const overdue = left < 0;
+    return h("div", { class: `panel ${overdue ? "alert" : ""}` },
+      h("h3", {}, "Manager approval"),
+      h("div", { class: "big" }, overdue
+        ? (side === "adk" ? `Deadline passed ${-left}s ago. The in-memory timer died with its host; nothing woke this invocation.`
+                          : `Deadline passed ${-left}s ago. The timer fired; waiting for a Worker to act on it.`)
+        : h("span", {}, "Deadline in ", h("span", { class: "countdown" }, `${left}s`), " (48h in production)")),
+      h("div", { class: "line muted" }, where),
+      h("div", { style: "display:flex;gap:6px;margin-top:6px" },
+        h("button", { class: "small", onclick: () => post("/api/approve", { side, approved: true }).then(refresh) }, "Approve"),
+        h("button", { class: "small", onclick: () => post("/api/approve", { side, approved: false }).then(refresh) }, "Reject")));
+  }
+  if (side === "temporal" && p.timerFired && !escalated) {
+    return h("div", { class: "panel alert" }, h("h3", {}, "Manager approval"),
+      h("div", { class: "big" }, "Deadline passed: the timer fired on the Temporal Service."),
+      h("div", { class: "line muted" }, "TimerFired is in the history. The first Worker to come back acts on it."));
+  }
+  if (escalated) {
+    return h("div", { class: "panel good" }, h("h3", {}, "Manager approval"),
+      h("div", { class: "big" }, side === "adk" ? "Deadline passed → in-memory timer fired → escalated and denied"
+                                                : "Deadline passed → timer fired → escalated and denied"),
+      h("div", { class: "line muted" }, side === "adk" ? "The host that paused the invocation was alive at the deadline."
+                                                       : "No scheduler, no cron: the timer is part of the Workflow's history."));
+  }
+  return null;
+}
+
+function renderRecovery(side, p) {
+  if (side === "adk") {
+    const orphan = state.run && p.status === "unfinished" && !adkHostBusy();
+    const rec = state.recovered;
+    return h("div", { class: `panel clickable weak ${orphan ? "hurting" : ""}`, title: "Click for the recovery code (recovery.py)",
+                      onclick: (e) => { if (e.target.tagName !== "BUTTON") openNode("adk", "recovery"); } },
+      h("div", { class: "panel-head" }, h("h3", {}, "Who resumes?"), h("span", { class: "muted" }, "code ›")),
+      h("div", { class: "big" }, "Your code. ADK resumes only when asked."),
+      orphan ? h("div", { class: "line strong" }, "Unfinished, and no host is working on it.") : null,
+      rec && rec.resumed && rec.resumed.length ? h("div", { class: `line ${rec.resumed.length > 1 ? "twice" : "muted"}` },
+        "Last scan resumed it on ",
+        rec.resumed.length > 1 ? h("b", {}, rec.resumed.map((r) => `host ${r.host.toUpperCase()}`).join(" and "), ": the same invocation, twice")
+                               : `host ${rec.resumed[0].host.toUpperCase()}`) : null,
+      h("div", { style: "margin-top:6px;display:flex;gap:6px;flex-wrap:wrap" },
+        h("button", { class: orphan ? "small primary" : "small", onclick: () => post("/api/adk/recover").then(refresh) }, "Run recovery scan + resume"),
+        state.processes.filter((x) => x.side === "adk" && x.state === "running").length > 1
+          ? h("button", { class: "small", title: "Every live host runs the scan at the same moment, as replicas scanning on startup would",
+                          onclick: () => post("/api/adk/recover", { hosts: "all" }).then(refresh) }, "Scan on every host") : null));
+  }
+  const hist = (state.temporal && state.temporal.history) || [];
+  const workers = [...new Set(hist.filter((e) => e.identity).map((e) => e.identity.replace(/^.*?(worker-\w).*$/, "$1")))];
+  const timedOut = hist.filter((e) => e.type === "WorkflowTaskTimedOut" || e.type === "ActivityTaskTimedOut").length;
+  return h("div", { class: "panel clickable good", title: "Click for how a Worker picks up work", onclick: () => openNode("temporal", "recovery") },
+    h("div", { class: "panel-head" }, h("h3", {}, "Who resumes?"), h("span", { class: "muted" }, "code ›")),
+    h("div", { class: "big" }, "Any Worker on the task queue, automatically."),
+    h("div", { class: "line muted" },
+      workers.length ? `Worked on by ${workers.join(", ")}` : "No Worker has picked it up yet.",
+      timedOut ? ` · ${timedOut} timeout(s) detected and retried` : ""));
+}
+
+function renderPersistence(side, p) {
+  const recs = p.records || [];
+  const title = side === "adk" ? "Session database" : "Event history";
+  const rows = side === "adk" ? recs.map(adkRow) : recs.map(temporalRow);
+  const list = h("div", { class: "records" }, rows.map((r) => {
+    const fresh = !seen[side].has(r.key);
+    seen[side].add(r.key);
+    return h("div", { class: `rec ${r.cls || ""} ${fresh ? "new" : ""}` }, h("span", { class: "n" }, r.n), h("span", { class: "t" }, r.text));
+  }));
+  const ui = side === "temporal" && state.temporal && state.temporal.ui_url;
+  const panel = h("div", { class: "panel" },
+    h("div", { class: "panel-head" },
+      h("h3", {}, title),
+      h("span", { class: "muted" }, `${recs.length} events`,
+        ui ? [" · ", h("a", { href: ui, target: "_blank", rel: "noopener", title: "Open this Workflow in the Temporal UI" }, "UI ↗")] : "")),
+    list);
+  requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+  return panel;
+}
+
+function shortJson(v, max = 70) {
+  if (v == null) return "";
+  const t = typeof v === "string" ? v : JSON.stringify(v);
+  return t.length > max ? t.slice(0, max) + "…" : t;
+}
+
+function adkRow(e) {
+  const k = { user_message: "user message", function_call: "call", function_response: "result", final_text: "final answer",
+              end_of_agent: "end of agent", approval_request: "approval request", approval_answer: "approval answer" }[e.kind] || e.kind;
+  const cls = e.kind === "function_response" ? "hl" : "";
+  const many = Math.max((e.calls || []).length, (e.responses || []).length);
+  const text = many > 1
+    ? [h("b", {}, `${many} ${k === "call" ? "calls" : "results"}`), " ", h("code", {}, e.name), " ", h("span", { class: "muted" }, "in one event")]
+    : [h("b", {}, k), " ", e.name ? h("code", {}, e.name) : "", " ", h("span", { class: "muted" }, shortJson(e.data))];
+  return { key: e.id, n: e.i + 1, text, cls };
+}
+
+function temporalRow(e) {
+  const interesting = e.activity ? [" ", h("code", {}, e.activity === "invoke_model" ? "LLM call" : e.activity)] : [];
+  const extra = e.attempt > 1 ? ` attempt ${e.attempt}` : e.identity ? ` by ${e.identity}` : "";
+  const cls = e.type === "ActivityTaskCompleted" ? "hl" : /TimedOut|Failed/.test(e.type) ? "bad" : "";
+  const data = e.type === "ActivityTaskCompleted" || e.type === "TimerStarted" ? shortJson(e.data ?? (e.timeout_seconds ? `${e.timeout_seconds}s` : "")) : "";
+  return { key: String(e.id), n: e.id, text: [h("b", {}, e.type), ...interesting, h("span", { class: "muted" }, extra, data ? ` ${data}` : "")], cls };
+}
+
+const CRASH_OPTION = { refund_charged: "inside refund_payment", refund_returned: "after refund_payment returns",
+                       before_notify: "before notify_customer", batch_partial: "mid-batch (parallel refunds)" };
+function renderCrashSelect(side) {
+  const armed = state.faults[side];
+  return h("label", { class: `crash ${armed ? "armed" : ""}`, title: "The next process on this side to reach the point dies with os._exit" },
+    "⚡ Crash",
+    h("select", { "aria-label": `Crash point for ${side}`, onchange: (e) => post("/api/faults", { side, point: e.target.value || null }).then(refresh) },
+      h("option", { value: "" }, "not armed"),
+      Object.entries(state.fault_points).map(([k, v]) => h("option", { value: k, selected: armed === k, title: v }, CRASH_OPTION[k] || k))));
+}
+
+function logClass(line) {
+  return /CRASH|died|SIGKILL|Error/.test(line) ? "crash" : /^[▶■↻]/.test(line) ? "sys" : /recorded in history|persisted/.test(line) ? "good" : "";
+}
+
+function renderLogBox(side) {
+  // Closed by default: the summary line shows the latest output, so a crash is still visible.
+  const lines = state.logs[side] || [];
+  const last = lines[lines.length - 1];
+  return h("details", { class: "logbox", open: store.get(`log-${side}`) === "open",
+                        ontoggle: (e) => store.set(`log-${side}`, e.target.open ? "open" : "closed") },
+    h("summary", {}, "Process log", last ? h("span", { class: `last ${logClass(last.line)}` }, `${last.proc}: ${last.line}`) : null),
+    renderLog(side));
+}
+
+function renderLog(side) {
+  const lines = (state.logs[side] || []).slice(-60);
+  if (!lines.length) return h("div", { class: "log" }, h("span", { class: "sys" }, "No output yet."));
+  return h("div", { class: "log" }, lines.map((l) => h("div", { class: logClass(l.line) }, h("span", { class: "sys" }, `${l.proc}: `), l.line)));
+}
+
+// ---- Rendering: business systems --------------------------------------------
+function renderBusiness() {
+  const root = document.getElementById("business");
+  const b = state.business || {};
+  if (b.error) { patch(root, h("h2", {}, "Business systems"), h("p", { class: "muted" }, b.error)); return; }
+  const run = state.run;
+  const totals = ["adk", "temporal"].map((side) => {
+    const moved = (b.refunds || []).filter((r) => r.side === side && !r.replayed);
+    const sum = moved.reduce((a, r) => a + r.amount_cents, 0);
+    const n = expected("refund_payment");
+    const over = run && moved.length > n;
+    return h("div", { class: `total ${over ? "bad" : moved.length ? "ok" : ""}` },
+      h("span", { class: `side-tag ${side}` }, side === "adk" ? "ADK" : "TEMPORAL"), " refunded ", h("b", {}, money(sum)),
+      run ? ` for a ${money(run.amount_cents)} request` : "", over ? ` · ${moved.length} refunds${n > 1 ? ` for ${n} items` : ""}!` : "");
+  });
+  const seenKey = {};
+  const refundRows = (b.refunds || []).map((r) => {
+    const item = (/\(item (\d+) of \d+\)/.exec(r.reason || "") || [])[1];
+    const k = `${r.side}|${item || ""}`;
+    seenKey[k] = (seenKey[k] || 0) + (r.replayed ? 0 : 1);
+    const dup = !r.replayed && seenKey[k] > 1;
+    return h("tr", { class: dup ? "dup" : r.replayed ? "replayed" : "" },
+      h("td", {}, h("span", { class: `side-tag ${r.side}` }, r.side === "adk" ? "ADK" : "TEMPORAL")),
+      h("td", {}, run ? `+${(r.ts - run.started_at).toFixed(1)}s` : ""),
+      h("td", {}, money(r.amount_cents), item ? h("span", { class: "muted" }, ` · item ${item}`) : ""),
+      h("td", { class: "mono" }, r.refund_id),
+      h("td", { class: "mono" }, r.idempotency_key ? r.idempotency_key.slice(0, 22) + "…" : h("span", { class: "muted" }, "none")),
+      h("td", {}, r.replayed ? "duplicate request: original returned, no money moved" : dup ? "DUPLICATE: money moved again" : "money moved"));
+  });
+  const small = (title, rows, fmt) => h("div", {}, h("h3", {}, title),
+    rows && rows.length ? h("div", { class: "table-wrap" }, h("table", {}, rows.map((r) => h("tr", {},
+      h("td", {}, h("span", { class: `side-tag ${r.side}` }, r.side === "adk" ? "ADK" : "TMP")), h("td", {}, fmt(r)))))) : h("div", { class: "muted", style: "font-size:12px" }, "none"));
+  const showEsc = (b.escalations || []).length || (run && run.approval_threshold_cents != null);
+  patch(root, 
+    h("div", { style: "display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center" },
+      h("div", {}, h("h2", {}, "Business systems: what really happened"),
+        h("div", { class: "muted", style: "font-size:12px" }, "Mock payment provider, order system and email, outside both runtimes.",
+          run ? ` Run ${run.run_id}.` : "")),
+      h("div", { class: "totals" }, totals)),
+    h("div", { class: `biz-grid ${showEsc ? "" : "no-esc"}` },
+      h("div", {}, h("h3", {}, "Payment provider · refunds"),
+        refundRows.length ? h("div", { class: "table-wrap" }, h("table", {},
+          h("tr", {}, ["side", "when", "amount", "refund id", "idempotency key", ""].map((t) => h("th", {}, t))), refundRows))
+          : h("div", { class: "muted", style: "font-size:12px" }, "No refunds yet.")),
+      small("Order system · recorded refunds", b.order_refunds, (r) => `${r.order_id} · ${r.refund_id}`),
+      small("Email · notifications", b.notifications, (r) => r.message),
+      showEsc ? small("Managers' queue · escalations", b.escalations, (r) => `${r.order_id}: ${r.reason}`) : null),
+    h("details", { style: "margin-top:10px" }, h("summary", {}, "Presenter log"),
+      h("div", { class: "notes" }, state.notes.slice().reverse().map((n) => h("div", {}, `${new Date(n.ts * 1000).toLocaleTimeString()} · ${n.text}`)))),
+  );
+}
+
+// ---- Node dialog: code and what's persisted -------------------------------------
+const WHAT = {
+  request: "How a refund starts. ADK: the host creates a session (with this run's settings in its state) and runs the agent with the customer's message. Temporal: the API starts a Workflow; the Workflow creates an in-memory ADK session and runs the same agent.",
+  decide: "The model decides the next step. Here it is a deterministic fake that follows INSTRUCTION, so every run is the same (set REFUND_DEMO_MODEL for Gemini). On Temporal, TemporalModel runs each model call as an Activity, so a model answer is recorded once and never paid for twice.",
+  approval: "The approval policy is ADK's own tool confirmation on both sides. What differs is the deadline: Temporal waits in wait_condition with a timeout (a durable timer) and escalates when it fires.",
+  refund_payment: "The side effect that matters: money leaves the company. The same plain ADK tool on both sides (tools.py, no Temporal in it). On Temporal, a thin Activity in temporal_side/activities.py calls it, with a start-to-close timeout and a retry policy.",
+  record_refund: "Records the refund in the order system.",
+  notify_customer: "Emails the customer.",
+  done: "The agent's final answer.",
+  recovery: "",
+};
+const RECOVERY_WHAT = {
+  adk: "ADK resumes an invocation only when something calls run_async(invocation_id=…). After a crash, something has to find the unfinished invocations and pick a host to resume them on. This is the smallest version of that code. A production version also needs a sweeper schedule, a way to tell dead from slow, leases, deadlines and a story for code changes.",
+  temporal: "Nothing to write. A Worker is a stateless poller: any Worker on the task queue picks up any Workflow task and rebuilds the Workflow's state by replaying its event history. The Temporal Service notices a dead Worker through timeouts and hands its work to another.",
+};
+
+let dialogState = null;
+async function openNode(side, node) {
+  const dialog = document.getElementById("node-dialog");
+  dialogState = { side, node, tab: dialogState && dialogState.node === node ? dialogState.tab : "code", source: null };
+  if (!dialog.open) dialog.showModal();
+  renderDialog();
+  const key = node === "done" ? "agent" : node;
+  const res = await api(`/api/source/${encodeURIComponent(key)}?side=${side}`);
+  if (dialogState && dialogState.node === node && dialogState.side === side) {
+    dialogState.source = res.status === 200 ? res.body : [];
+    renderDialog();
+  }
+}
+
+function renderDialog() {
+  const dialog = document.getElementById("node-dialog");
+  const inner = dialog.querySelector(".inner");
+  if (!dialogState) return;
+  const { side, node, tab, source } = dialogState;
+  const label = node === "recovery" ? "who resumes after a crash" : (NODES.find((n) => n.id === node) || { label: node }).label;
+  const setTab = (t) => { dialogState.tab = t; renderDialog(); };
+  patch(inner, 
+    h("div", { class: "head" },
+      h("h2", { id: "node-title" }, h("span", { class: `side-tag ${side}`, style: "font-size:13px" }, side === "adk" ? "ADK · " : "TEMPORAL · "), label),
+      h("button", { type: "button", onclick: () => dialog.close() }, "Close")),
+    h("div", { class: "what" }, node === "recovery" ? RECOVERY_WHAT[side] : WHAT[node] || ""),
+    h("div", { class: "tabs", role: "group", "aria-label": "View" },
+      [["code", "Code"], ["persisted", "What's persisted"]].map(([t, l]) => h("button", { type: "button", "aria-pressed": String(tab === t), onclick: () => setTab(t) }, l))),
+    tab === "code" ? renderCode(source) : renderPersisted(side, node),
+  );
+}
+
+function renderCode(source) {
+  if (source == null) return h("p", { class: "muted" }, "Loading source…");
+  if (!source.length) return h("p", { class: "muted" }, "No source for this step.");
+  return h("div", {}, source.map((part) => h("div", { class: "part" },
+    h("div", { class: "part-title" }, h("code", {}, part.name), h("span", { class: "muted" }, `refund_demo/${part.file}:${part.line}`)),
+    codeBlock(part.runs, part.line))));
+}
+
+function codeBlock(runs, first) {
+  const lines = [[]];
+  for (const [kind, text] of runs) {
+    text.split("\n").forEach((piece, i) => {
+      if (i) lines.push([]);
+      if (piece) lines[lines.length - 1].push(kind ? h("span", { class: `t-${kind}` }, piece) : piece);
+    });
+  }
+  if (!lines[lines.length - 1].length) lines.pop();
+  return h("pre", { class: "code" }, lines.flatMap((line, i) => [h("span", { class: "ln" }, first + i), ...line, "\n"]));
+}
+
+function adkDetail(e) {
+  // One event can hold several parallel calls, or all their results.
+  if ((e.calls || []).length > 1) return { invocation_id: e.invocation_id, calls: e.calls };
+  if ((e.responses || []).length > 1) return { invocation_id: e.invocation_id, results: e.responses };
+  return { invocation_id: e.invocation_id, call_id: e.call_id, data: e.data };
+}
+
+function renderPersisted(side, node) {
+  if (!state.run) return h("p", { class: "muted" }, "Start a run to see what each side records.");
+  const recs = picture(side).records || [];
+  let pick;
+  if (side === "adk") {
+    pick = {
+      request: (e) => e.kind === "user_message",
+      decide: (e) => e.kind === "function_call" || e.kind === "final_text",
+      approval: (e) => e.kind === "approval_request" || e.kind === "approval_answer",
+      done: (e) => e.kind === "final_text" || e.kind === "end_of_agent",
+      recovery: () => true,
+    }[node] || ((e) => e.name === node);
+  } else {
+    pick = {
+      request: (e) => e.type === "WorkflowExecutionStarted",
+      decide: (e) => e.activity === "invoke_model",
+      approval: (e) => /^Timer|Update|escalate/.test(e.type) || e.activity === "escalate_to_manager",
+      done: (e) => e.type === "WorkflowExecutionCompleted",
+      recovery: (e) => /WorkflowTask|TimedOut/.test(e.type),
+    }[node] || ((e) => e.activity === node);
+  }
+  const chosen = recs.filter(pick);
+  const intro = side === "adk"
+    ? "Events in the ADK session database for this run. A tool's result exists only once its function response event has been written."
+    : "Events in this Workflow's history on the Temporal Service. ActivityTaskCompleted is written by the Service when the Activity reports its result, before any Workflow code runs.";
+  const ops = businessOps(side)[node];
+  const results = side === "adk" ? chosen.reduce((a, e) => a + (e.responses || []).filter((r) => r.name === node).length, 0)
+                                 : chosen.filter((e) => e.type === "ActivityTaskCompleted").length;
+  const unrecorded = ops ? ops.moved + ops.replayed - results : 0;
+  return h("div", {},
+    h("p", { class: "muted", style: "font-size:12.5px;margin-top:0" }, intro),
+    ops ? h("p", { style: "font-size:13px" }, h("b", {}, "Business systems: "), `this side effect really happened ${ops.moved} time(s)`,
+      ops.replayed ? `, plus ${ops.replayed} deduplicated retry` : "", `. Results recorded here: ${results}.`,
+      unrecorded > 0 ? h("b", { style: "color:var(--bad)" }, ` ${unrecorded} execution(s) left no record, so ${side === "adk" ? "resume" : "the retry"} could not know they happened.`) : null) : null,
+    chosen.length ? chosen.map((e) => h("div", {},
+      h("div", { style: "font-size:12.5px" }, h("b", {}, side === "adk" ? `#${e.i + 1} ${e.kind}` : `#${e.id} ${e.type}`),
+        e.name ? [" ", h("code", {}, e.name)] : "", e.activity ? [" ", h("code", {}, e.activity)] : "",
+        e.attempt ? ` attempt ${e.attempt}` : "", e.identity ? ` · ${e.identity}` : ""),
+      h("pre", { class: "json" }, JSON.stringify(side === "adk" ? adkDetail(e) : e, null, 2))))
+      : h("p", { class: "muted" }, node === "refund_payment" && side === "adk" && businessOps("adk").refund_payment.moved
+          ? "Nothing recorded for this step, yet the money moved. This is the gap."
+          : "Nothing recorded for this step yet."),
+  );
+}
+
+document.getElementById("node-dialog").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+document.getElementById("node-dialog").addEventListener("close", () => { dialogState = null; });
+
+// ---- Loop -------------------------------------------------------------------
+function renderAll() {
+  if (!state) return;
+  renderControls();
+  renderPlayer();
+  // Re-rendering a column would close a dropdown the presenter has open.
+  const focused = document.activeElement && document.activeElement.tagName === "SELECT" ? document.activeElement.closest(".side") : null;
+  for (const side of ["adk", "temporal"]) if (!focused || focused.id !== `side-${side}`) renderSide(side);
+  renderBusiness();
+  if (dialogState && dialogState.tab === "persisted") renderDialog();
+}
+
+async function refresh() {
+  const res = await api("/api/state");
+  if (res.status === 200) {
+    state = res.body;
+    renderAll();
+    maybeAutoplay();
+  }
+}
+
+document.addEventListener("keydown", (e) => {
+  if (document.getElementById("node-dialog").open || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.key === "ArrowRight") goTo(stepIndex + 1);
+  if (e.key === "ArrowLeft" && stepIndex > 0) { stepIndex -= 1; renderPlayer(); }
+});
+
+(async function main() {
+  const res = await api("/static/scenarios.json");
+  scenarios = res.body ? res.body.acts : [];
+  if (actIndex >= scenarios.length) actIndex = 0;
+  await refresh();
+  setInterval(refresh, 700);
+  // Deep link to a node's dialog: #adk/refund_payment or #temporal/approval/persisted
+  const [side, node, tab] = location.hash.slice(1).split("/");
+  if (SIDES[side] && node) { await openNode(side, node); if (tab) { dialogState.tab = tab; renderDialog(); } }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "ADK: crash after refund_payment returns",
+    "output": "doc/crash-adk.html",
+    "viewBox": [
+      1080,
+      680
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "main call"
+        },
+        "security": {
+          "label": "crash / repeat"
+        },
+        "dashed": {
+          "label": "bookkeeping"
+        },
+        "return": {
+          "label": "response"
+        },
+        "default": {
+          "label": "message"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "operator",
+      "type": "external",
+      "label": "Operator",
+      "sublabel": "or your recovery code"
+    },
+    {
+      "id": "host",
+      "type": "backend",
+      "label": "ADK host",
+      "sublabel": "Runner, resumable"
+    },
+    {
+      "id": "model",
+      "type": "cloud",
+      "label": "Model",
+      "sublabel": "LLM call"
+    },
+    {
+      "id": "sessions",
+      "type": "database",
+      "label": "Session DB",
+      "sublabel": "SQLite events"
+    },
+    {
+      "id": "payments",
+      "type": "external",
+      "label": "Payment provider",
+      "sublabel": "moves money"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 310,
+      "label": "First run"
+    },
+    {
+      "from": 320,
+      "to": 350,
+      "label": "Host dies"
+    },
+    {
+      "from": 380,
+      "to": 575,
+      "label": "Manual resume"
+    }
+  ],
+  "messages": [
+    {
+      "id": "ask-model",
+      "from": "host",
+      "to": "model",
+      "y": 165,
+      "label": "what next?"
+    },
+    {
+      "id": "call-refund",
+      "from": "model",
+      "to": "host",
+      "y": 197,
+      "label": "call refund_payment",
+      "variant": "return"
+    },
+    {
+      "id": "save-call",
+      "from": "host",
+      "to": "sessions",
+      "y": 229,
+      "label": "append function_call",
+      "variant": "dashed"
+    },
+    {
+      "id": "refund-1",
+      "from": "host",
+      "to": "payments",
+      "y": 263,
+      "label": "refund $500",
+      "variant": "emphasis"
+    },
+    {
+      "id": "refund-1-ok",
+      "from": "payments",
+      "to": "host",
+      "y": 295,
+      "label": "refunded re_1",
+      "variant": "return"
+    },
+    {
+      "id": "crash",
+      "from": "host",
+      "to": "sessions",
+      "y": 335,
+      "label": "function_response never written",
+      "variant": "security",
+      "note": "host killed (os._exit) right after the tool returned"
+    },
+    {
+      "id": "resume",
+      "from": "operator",
+      "to": "host",
+      "y": 395,
+      "label": "run_async(invocation_id)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "load",
+      "from": "host",
+      "to": "sessions",
+      "y": 428,
+      "label": "load events",
+      "variant": "dashed"
+    },
+    {
+      "id": "no-result",
+      "from": "sessions",
+      "to": "host",
+      "y": 460,
+      "label": "call with no response",
+      "variant": "return"
+    },
+    {
+      "id": "refund-2",
+      "from": "host",
+      "to": "payments",
+      "y": 495,
+      "label": "refund $500 again",
+      "variant": "security"
+    },
+    {
+      "id": "refund-2-ok",
+      "from": "payments",
+      "to": "host",
+      "y": 527,
+      "label": "refunded re_2",
+      "variant": "return"
+    },
+    {
+      "id": "save-result",
+      "from": "host",
+      "to": "sessions",
+      "y": 560,
+      "label": "append function_response",
+      "variant": "dashed"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "host",
+      "from": 160,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "host",
+      "from": 390,
+      "to": 565,
+      "type": "backend"
+    },
+    {
+      "participant": "payments",
+      "from": 258,
+      "to": 301,
+      "type": "external"
+    },
+    {
+      "participant": "payments",
+      "from": 490,
+      "to": 533,
+      "type": "external"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "The gap",
+      "items": [
+        "The money moved, but the session database has only the function call",
+        "On resume ADK drops the dangling call and runs the tool again",
+        "ADK documents this: at-least-once once resumed; tools must be idempotent"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Who resumes",
+      "items": [
+        "A restarted or second host stays idle",
+        "Something must find the invocation id and call resume"
+      ]
+    }
+  ]
+}

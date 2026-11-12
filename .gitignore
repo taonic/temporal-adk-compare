@@ -1,0 +1,9 @@
+.venv/
+var/
+__pycache__/
+*.pyc
+.pytest_cache/
+doc/*.browser-check.json
+doc/*.delivery.json
+doc/*.finalize.json
+doc/*.finalize-summary.json

@@ -1,0 +1,42 @@
+# Fly.io deployment of the whole demo. Deployed by .github/workflows/deploy.yml.
+#
+# One machine only (deploy with --ha=false): the demo keeps its state in that
+# machine's processes and files, and every viewer shares the same demo.
+
+app = "temporal-adk-compare"
+primary_region = "sjc"
+
+[build]
+
+[env]
+  TEMPORAL_UI = "https://temporal-adk-compare.fly.dev:8233"
+
+# The demo UI and API.
+[http_service]
+  internal_port = 8400
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "60s"
+    interval = "30s"
+    timeout = "5s"
+    method = "GET"
+    path = "/"
+
+# The Temporal dev server's Web UI, for the "open in Temporal UI" links.
+[[services]]
+  internal_port = 8233
+  protocol = "tcp"
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+
+  [[services.ports]]
+    port = 8233
+    handlers = ["tls", "http"]
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"

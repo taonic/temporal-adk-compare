@@ -1,0 +1,31 @@
+[project]
+name = "temporal-adk-compare"
+version = "0.1.0"
+description = "Durable agent (Google ADK resumability) vs durable execution (Temporal): a live crash demo"
+authors = [
+    { name = "Tao Guo", email = "tao@temporal.io" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.162.5",
+    "google-adk==2.13.0",
+    "httpx>=0.28.1",
+    "temporalio>=1.36.0",
+    "temporalio-google-adk>=0.0.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["."]

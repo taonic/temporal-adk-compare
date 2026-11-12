@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests (every act, real processes, real crashes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TEMPORAL_CLI_VERSION: 1.8.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+
+      # The tests start a private copy of the demo, which starts its own
+      # Temporal dev server with this CLI.
+      - name: Install the Temporal CLI
+        run: |
+          curl -sSfL "https://github.com/temporalio/cli/releases/download/v${TEMPORAL_CLI_VERSION}/temporal_cli_${TEMPORAL_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin temporal
+          temporal --version
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Unit tests
+        run: uv run pytest tests/test_units.py
+
+      - name: Act tests
+        run: uv run pytest tests/test_acts.py
+
+      - name: Build the container image
+        run: docker build -t temporal-adk-compare .

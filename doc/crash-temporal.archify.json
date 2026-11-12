@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Temporal: same crash, same agent",
+    "output": "doc/crash-temporal.html",
+    "viewBox": [
+      1080,
+      640
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "main call"
+        },
+        "security": {
+          "label": "crash / repeat"
+        },
+        "dashed": {
+          "label": "bookkeeping"
+        },
+        "return": {
+          "label": "response"
+        },
+        "default": {
+          "label": "message"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "worker-a",
+      "type": "backend",
+      "label": "Worker A",
+      "sublabel": "runs the agent loop"
+    },
+    {
+      "id": "service",
+      "type": "cloud",
+      "label": "Temporal Service",
+      "sublabel": "event history"
+    },
+    {
+      "id": "worker-b",
+      "type": "backend",
+      "label": "Worker A restarted",
+      "sublabel": "or any other Worker"
+    },
+    {
+      "id": "payments",
+      "type": "external",
+      "label": "Payment provider",
+      "sublabel": "moves money"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 310,
+      "label": "First run"
+    },
+    {
+      "from": 320,
+      "to": 350,
+      "label": "Worker dies"
+    },
+    {
+      "from": 380,
+      "to": 510,
+      "label": "Automatic recovery"
+    }
+  ],
+  "messages": [
+    {
+      "id": "schedule",
+      "from": "worker-a",
+      "to": "service",
+      "y": 165,
+      "label": "schedule refund_payment",
+      "variant": "dashed"
+    },
+    {
+      "id": "task",
+      "from": "service",
+      "to": "worker-a",
+      "y": 197,
+      "label": "Activity task",
+      "variant": "return"
+    },
+    {
+      "id": "refund",
+      "from": "worker-a",
+      "to": "payments",
+      "y": 229,
+      "label": "refund $500",
+      "variant": "emphasis"
+    },
+    {
+      "id": "refund-ok",
+      "from": "payments",
+      "to": "worker-a",
+      "y": 261,
+      "label": "refunded re_1",
+      "variant": "return"
+    },
+    {
+      "id": "complete",
+      "from": "worker-a",
+      "to": "service",
+      "y": 295,
+      "label": "Activity completed",
+      "variant": "emphasis",
+      "note": "ActivityTaskCompleted written to history"
+    },
+    {
+      "id": "crash",
+      "from": "worker-a",
+      "to": "service",
+      "y": 335,
+      "label": "Workflow task never completes",
+      "variant": "security",
+      "note": "Worker killed (os._exit) in after_tool_callback; the Service times the task out"
+    },
+    {
+      "id": "poll",
+      "from": "worker-b",
+      "to": "service",
+      "y": 395,
+      "label": "poll task queue",
+      "variant": "dashed"
+    },
+    {
+      "id": "history",
+      "from": "service",
+      "to": "worker-b",
+      "y": 428,
+      "label": "Workflow task + history (refund result)",
+      "variant": "return"
+    },
+    {
+      "id": "next",
+      "from": "worker-b",
+      "to": "service",
+      "y": 462,
+      "label": "schedule record_refund",
+      "variant": "dashed"
+    },
+    {
+      "id": "done",
+      "from": "service",
+      "to": "worker-b",
+      "y": 495,
+      "label": "continue: record, notify, complete",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "worker-a",
+      "from": 160,
+      "to": 340,
+      "type": "backend"
+    },
+    {
+      "participant": "worker-b",
+      "from": 390,
+      "to": 500,
+      "type": "backend"
+    },
+    {
+      "participant": "payments",
+      "from": 224,
+      "to": 267,
+      "type": "external"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "No repeat",
+      "items": [
+        "The Temporal Service recorded the result when the Activity reported back",
+        "Replay returns the recorded result; refund_payment does not run again",
+        "Nobody called resume: the next Worker to poll picked it up"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Still at-least-once inside an Activity",
+      "items": [
+        "A crash before the Activity reports back means a retry after its timeout",
+        "That retry needs an idempotency key, as on ADK"
+      ]
+    }
+  ]
+}
