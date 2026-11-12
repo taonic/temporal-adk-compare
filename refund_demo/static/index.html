@@ -109,7 +109,7 @@
   @media (max-width: 700px) { .claim p { font-size: 15px; } }
 
   /* Scenario player */
-  .player { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 18px; align-items: start;
+  .player { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 18px; align-items: start;
             border-left: 4px solid var(--accent); }
   .acts { display: flex; flex-wrap: wrap; gap: 4px; grid-column: 1 / -1; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   .acts button { border-color: transparent; background: none; color: var(--muted); padding: 3px 10px; font-size: 13px; }
@@ -139,8 +139,10 @@
   /* Content-only acts (the wrap-up): no runtime columns, no ledger, a full-width caption. */
   body.content-only .legend, body.content-only .sides, body.content-only #business { display: none; }
   body.content-only .caption { max-width: none; }
-  .player .nav { display: grid; gap: 6px; min-width: 190px; }
-  .player .nav-row { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+  /* Under the caption: Next first, then back, progress and autoplay. */
+  .player .nav { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+  .player .nav > .primary { min-width: 160px; }
+  .player .nav-row { display: flex; gap: 8px; align-items: center; }
   .player .progress { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .player .waiting { font-size: 12px; color: var(--warn); margin-top: 6px; }
   .player .proves { font-size: 12px; color: var(--muted); margin-top: 8px; }
