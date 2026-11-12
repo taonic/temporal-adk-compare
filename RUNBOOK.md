@@ -1,6 +1,6 @@
 # Runbook
 
-For whoever presents the demo. About 19 minutes for all four acts and the wrap-up. For a short slot, run Acts 1 and 4 (about 10 minutes): who restarts the work, and what a crash after a side effect costs.
+For whoever presents the demo. About 21 minutes for all four acts and the wrap-up. For a short slot, run Acts 1 and 4 (about 10 minutes): who restarts the work, and what a crash after a side effect costs.
 
 ## Before the meeting
 
@@ -68,9 +68,16 @@ Don't spend more than about 20s on the second step: its outage lasts 30s, and on
 | Key on, crash again | Both show **deduped ×1** | The function call id is stable on both runtimes. |
 | Resume ADK | Ledger rows *duplicate request: original returned* | Recap the three differences in the caption. |
 
-### Wrap-up (1 min)
+### Wrap-up (3 min)
 
-The table is the closing statement: automated process recovery, durable retries, durable timers and strongly consistent tool execution, one row per act. Point at the note under it before anyone asks: a crash *inside* a tool needs an idempotency key on either runtime. Leave it on screen during questions.
+Content only: the runtime columns and the ledger are hidden.
+
+| Slide | Say |
+|---|---|
+| Durable execution, in four results | One row per act: automated process recovery, durable retries, durable timers, strongly consistent tool execution. Point at the note before anyone asks: a crash *inside* a tool needs an idempotency key on either runtime. |
+| What each runtime gives you | The full comparison, with where the demo showed each row. Human-in-the-loop is native on both. |
+| Use them together | Temporal owns the business process; ADK owns the agent's reasoning. Same `agent.py`. |
+| Questions to ask any agent runtime | Leave it on screen during questions. |
 
 ## Resetting
 
