@@ -29,6 +29,12 @@ def next_step(page, timeout: float = 120_000) -> None:
     page.locator(NEXT).click(timeout=timeout)
 
 
+def run_recovery_scan(page) -> None:
+    """Next doesn't resume ADK: the presenter clicks the recovery scan in the ADK column."""
+    finish_typing(page)
+    page.locator("#side-adk button", has_text="Run recovery scan").click()
+
+
 def step_count(page) -> str:
     return page.locator("#player .segs .count").inner_text()
 
@@ -37,8 +43,10 @@ def play_to_the_end(page, index: int) -> None:
     """Start the scenario and press Next through every step, then wait for the last one's outcome."""
     steps = len(SCENARIOS[index]["steps"])
     open_scenario(page, index)
-    for _ in range(steps):
+    for step in SCENARIOS[index]["steps"]:
         next_step(page)
+        if "adk_recovered" in (step.get("waitFor") or []):
+            run_recovery_scan(page)
     finish_typing(page)
     assert step_count(page) == f"{steps}/{steps}"
     page.wait_for_selector("#player .waiting", state="detached", timeout=120_000)

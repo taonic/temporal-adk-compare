@@ -23,7 +23,7 @@
       "steps": [
         {
           "title": "Set the stage: two of everything, no supervisor",
-          "caption": "Both columns run the same agent: one ADK agent with three tools. On the left, ADK at full strength: resumability on and a persistent session database. On the right, the same agent inside a Temporal Workflow, through the official ADK plugin, which turns every model call and tool call into an Activity.<span class=\"code-links\">Read the code: <a href=\"#adk/agent\" data-code=\"adk/agent\">the ADK setup</a><a href=\"#temporal/agent\" data-code=\"temporal/agent\">the Temporal setup</a></span><br>ADK gets a spare now: host B, healthy and idle. Temporal's spare, Worker B, starts once Worker A is gone, so every step shows which Worker did it. Auto-restart is off, so a dead process stays dead. The crash point is just before the email to the customer: the refund is done and recorded on both sides, so the only question is what continues the work.<br><br>The ADK column plays first, then the Temporal column runs the same refund.",
+          "caption": "Both columns run the same agent with three tools. Left: ADK with resumability and a persistent session DB. Right: the same agent in a Temporal Workflow, where the ADK plugin makes every model and tool call an Activity.<span class=\"code-links\">Read the code: <a href=\"#adk/agent\" data-code=\"adk/agent\">the ADK setup</a><a href=\"#temporal/agent\" data-code=\"temporal/agent\">the Temporal setup</a></span><br>ADK has a spare, host B. Temporal's spare, Worker B, starts after Worker A dies. Auto-restart is off. Both sides crash just before emailing the customer: what continues the work?",
           "actions": [
             {
               "post": "/api/reset"
@@ -72,14 +72,10 @@
         {
           "title": "Run the recovery scan you wrote",
           "side": "adk",
-          "caption": "<a href=\"#adk/recovery\" data-code=\"adk/recovery\"><code>recovery.py</code></a> scans every session and resumes the unfinished ones on host B. It works: ADK's resumability is real, and the refund is not repeated because its result was persisted before the crash.<br><br><mark class=\"weak\">What you now own: when the scan runs, when a quiet invocation counts as dead (resume a live one and you get a <a class=\"ext\" href=\"https://github.com/google/adk-python/blob/v2.13.0/src/google/adk/errors/_stale_session_error.py\" target=\"_blank\" rel=\"noopener\"><code>StaleSessionError</code></a>), a lease so two hosts don't both resume it, and code that changed since the crash.</mark><span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Event%20logging%20includes%20results%20from%20Tools%20which%20successfully%20returned%20a%20result\" target=\"_blank\" rel=\"noopener\">ADK docs: How resume works ↗</a><a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Do%20not%20modify%20a%20stopped%20agent%20workflow%20before%20resuming%20it\" target=\"_blank\" rel=\"noopener\">ADK docs: Don't change a stopped workflow ↗</a></span>",
-          "actions": [
-            {
-              "post": "/api/adk/recover"
-            }
-          ],
+          "caption": "Your turn: click <span class=\"do\">Run recovery scan + resume</span> in the ADK column. <a href=\"#adk/recovery\" data-code=\"adk/recovery\"><code>recovery.py</code></a> resumes the invocation on host B, and the refund isn't repeated.<br><br><mark class=\"weak\">Now you own when the scan runs, dead vs slow (<a class=\"ext\" href=\"https://github.com/google/adk-python/blob/v2.13.0/src/google/adk/errors/_stale_session_error.py\" target=\"_blank\" rel=\"noopener\"><code>StaleSessionError</code></a>), a lease, and code changed since the crash.</mark><span class=\"code-links\">ADK docs: <a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Event%20logging%20includes%20results%20from%20Tools%20which%20successfully%20returned%20a%20result\" target=\"_blank\" rel=\"noopener\">resume ↗</a><a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Do%20not%20modify%20a%20stopped%20agent%20workflow%20before%20resuming%20it\" target=\"_blank\" rel=\"noopener\">stopped workflows ↗</a></span>",
+          "actions": [],
           "waitFor": [
-            "adk_done"
+            "adk_recovered"
           ],
           "focus": [
             "recovery"
@@ -107,7 +103,7 @@
         {
           "title": "Start Worker B: it picks the work up",
           "side": "temporal",
-          "caption": "<mark class=\"strong\">Worker B picked it up.</mark> In the history: <code>WorkflowTaskTimedOut</code>, then <code>WorkflowTaskStarted</code> by worker-b, which replayed the history and sent the email. The earlier steps still read <i>by Worker A</i>: replay reuses their recorded results and runs none of them again.<br><br><mark class=\"strong\">No scan, no lease, no resume call: the Temporal Server noticed the dead Worker and handed the work to the next Worker polling the task queue.</mark><span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/tasks#how-worker-processes-workflow-task:~:text=If%20a%20Worker%20crashes%20mid%2Dexecution%2C%20another%20Worker%20can%20pick%20up%20the%20Workflow%20Task\" target=\"_blank\" rel=\"noopener\">Temporal docs: How a Worker processes a Workflow Task ↗</a></span>",
+          "caption": "<mark class=\"strong\">Worker B picked it up</mark>: <code>WorkflowTaskTimedOut</code>, then <code>WorkflowTaskStarted</code> by worker-b, which replayed the history and sent the email. Earlier steps still read <i>by Worker A</i>: replay reused their results.<br><br><mark class=\"strong\">No scan, no lease, no resume call: the Temporal Server handed the work to the next Worker polling the task queue.</mark><span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/tasks#how-worker-processes-workflow-task:~:text=If%20a%20Worker%20crashes%20mid%2Dexecution%2C%20another%20Worker%20can%20pick%20up%20the%20Workflow%20Task\" target=\"_blank\" rel=\"noopener\">Temporal docs: How a Worker processes a Workflow Task ↗</a></span>",
           "actions": [
             {
               "post": "/api/processes/worker-b/start"
@@ -147,7 +143,7 @@
       "steps": [
         {
           "title": "Same retry schedule, kept in two places",
-          "caption": "Both sides retry a failing model call on the same schedule: 1s, doubling, capped at 4s.<br><br>ADK: the model has retry options, up to 10 attempts, as you would configure Gemini. The retries happen inside the model call, in the host's memory.<br>Temporal: the model call is an Activity with a retry policy. The Temporal Server schedules each attempt.<span class=\"code-links\">Read the code: <a href=\"#adk/decide\" data-code=\"adk/decide\">ADK's retry options</a><a href=\"#temporal/decide\" data-code=\"temporal/decide\">Temporal's retry policy</a></span><br>One host and one Worker, auto-restart on. The ADK column plays first, then the Temporal column, each with its own outage.",
+          "caption": "Both sides retry a failing model call on the same schedule: 1s, doubling, capped at 4s. ADK: the model's retry options, kept in the host's memory. Temporal: an Activity retry policy, scheduled by the Temporal Server.<span class=\"code-links\">Read the code: <a href=\"#adk/decide\" data-code=\"adk/decide\">ADK's retry options</a><a href=\"#temporal/decide\" data-code=\"temporal/decide\">Temporal's retry policy</a></span><br>Auto-restart is on. ADK plays first, then Temporal, each with its own outage.",
           "actions": [
             {
               "post": "/api/reset"
@@ -209,14 +205,10 @@
         {
           "title": "Resume ADK",
           "side": "adk",
-          "caption": "The recovery scan resumes it and the refund completes.<br><br>Retries configured in process are only as durable as the process: <mark class=\"weak\">a crash during backoff turns a retry into an unfinished invocation</mark> that your code has to find.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://adk.dev/agents/models/google-gemini/#:~:text=Enable%20client%2Dside%20retries\" target=\"_blank\" rel=\"noopener\">ADK docs: Gemini models · client-side retries ↗</a></span>",
-          "actions": [
-            {
-              "post": "/api/adk/recover"
-            }
-          ],
+          "caption": "Your turn again: click <span class=\"do\">Run recovery scan + resume</span> in the ADK column. The scan resumes it and the refund completes.<br><br>In-process retries are only as durable as the process: <mark class=\"weak\">a crash during backoff leaves an unfinished invocation</mark> for your code to find.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://adk.dev/agents/models/google-gemini/#:~:text=Enable%20client%2Dside%20retries\" target=\"_blank\" rel=\"noopener\">ADK docs: Gemini models · client-side retries ↗</a></span>",
+          "actions": [],
           "waitFor": [
-            "adk_done"
+            "adk_recovered"
           ],
           "focus": [
             "decide",
@@ -251,7 +243,7 @@
         {
           "title": "Kill Worker A mid-retry",
           "side": "temporal",
-          "caption": "<code>kill -9</code> on Worker A while it backs off; the supervisor restarts it. The outage goes on for 12 more seconds.<br><br>The next attempt was already scheduled on the Temporal Server. The restarted Worker picks it up, and <mark class=\"strong\">Temporal finishes by itself</mark>: the first attempt after the outage succeeds, numbered after the ones before the crash. Nobody was paged, and no recovery code ran. On Temporal, the retry state is part of the durable execution.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/encyclopedia/retry-policies#:~:text=A%20Retry%20Policy%20is%20a%20collection%20of%20settings\" target=\"_blank\" rel=\"noopener\">Temporal docs: Retry Policies ↗</a></span>",
+          "caption": "<code>kill -9</code> on Worker A while it backs off; the supervisor restarts it.<br><br>The next attempt was already scheduled on the Temporal Server, so <mark class=\"strong\">Temporal finishes by itself</mark>: the attempt numbers carry on from before the crash, and no recovery code ran.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/encyclopedia/retry-policies#:~:text=A%20Retry%20Policy%20is%20a%20collection%20of%20settings\" target=\"_blank\" rel=\"noopener\">Temporal docs: Retry Policies ↗</a></span>",
           "actions": [
             {
               "post": "/api/processes/worker-a/kill"
@@ -330,14 +322,10 @@
         {
           "title": "Resume the ADK invocation",
           "side": "adk",
-          "caption": "Do what the ADK docs say: resume the invocation by its id. ADK finds a function call with no response (look for <i>“Dropping function calls with no matching function response”</i> in the log) and <mark class=\"weak\">runs <a href=\"#adk/refund_payment\" data-code=\"adk/refund_payment\"><code>refund_payment</code></a> again</mark>. Look at the ledger: ADK refunded $500 twice.<span class=\"code-links\">Read the code: <a href=\"#adk/runtime\" data-code=\"adk/runtime\">how ADK resumes</a></span><br>This is documented behaviour, not a bug. ADK's resumability docstring: <i>“Tool call to resume needs to be idempotent because we only guarantee an at-least-once behavior once resumed.”</i>",
-          "actions": [
-            {
-              "post": "/api/adk/recover"
-            }
-          ],
+          "caption": "Click <span class=\"do\">Run recovery scan + resume</span> in the ADK column. ADK finds a call with no response (<i>“Dropping function calls with no matching function response”</i> in the log) and <mark class=\"weak\">runs <a href=\"#adk/refund_payment\" data-code=\"adk/refund_payment\"><code>refund_payment</code></a> again</mark>: $500 refunded twice.<span class=\"code-links\">Read the code: <a href=\"#adk/runtime\" data-code=\"adk/runtime\">how ADK resumes</a></span><br>Documented, not a bug: <i>“we only guarantee an at-least-once behavior once resumed.”</i>",
+          "actions": [],
           "waitFor": [
-            "adk_done"
+            "adk_recovered"
           ],
           "focus": [
             "refund_payment"
@@ -346,7 +334,7 @@
         {
           "title": "The same refund on Temporal: Worker A dies right after the refund",
           "side": "temporal",
-          "caption": "Same request, same crash point. Watch <a href=\"#temporal/refund_payment\" data-code=\"temporal/refund_payment\"><code>refund_payment</code></a>: <i>recorded</i>, because the Temporal Server wrote <code>ActivityTaskCompleted</code> the moment the Activity reported back, before the Workflow code that crashed ever ran.<br><br>The supervisor restarted Worker A. <mark class=\"strong\">It polled the task queue and replayed the event history</mark>: <code>refund_payment</code>'s result came from the history and did not run again, so the agent went on to record the refund and email the customer. One refund, and nobody resumed anything.",
+          "caption": "Same crash point. <a href=\"#temporal/refund_payment\" data-code=\"temporal/refund_payment\"><code>refund_payment</code></a> shows <i>recorded</i>: the Temporal Server wrote <code>ActivityTaskCompleted</code> the moment the Activity reported back.<br><br>Worker A restarted, <mark class=\"strong\">polled the task queue and replayed the event history</mark>: the refund's result came from the history, so the agent went on to record it and email the customer. One refund; nobody resumed anything.",
           "actions": [
             {
               "post": "/api/runs/continue",
@@ -392,14 +380,10 @@
         {
           "title": "Resume ADK: refunded twice",
           "side": "adk",
-          "caption": "The resume runs <a href=\"#adk/refund_payment\" data-code=\"adk/refund_payment\"><code>refund_payment</code></a> again: <mark class=\"weak\">$ moved ×2</mark>, the same as before.",
-          "actions": [
-            {
-              "post": "/api/adk/recover"
-            }
-          ],
+          "caption": "Click <span class=\"do\">Run recovery scan + resume</span> in the ADK column, again.<br><br>The resume runs <a href=\"#adk/refund_payment\" data-code=\"adk/refund_payment\"><code>refund_payment</code></a> again: <mark class=\"weak\">$ moved ×2</mark>, the same as before.",
+          "actions": [],
           "waitFor": [
-            "adk_done"
+            "adk_recovered"
           ],
           "focus": [
             "refund_payment"
@@ -408,7 +392,7 @@
         {
           "title": "The same crash on Temporal: refunded twice too",
           "side": "temporal",
-          "caption": "Temporal notices the dead Worker when the Activity's start-to-close timeout (6s) passes, and retries: watch for attempt 2, then <mark class=\"weak\">$ moved ×2</mark>.<br><br>Temporal records a completed Activity exactly once and never re-runs it, but it <mark class=\"weak\">executes an Activity at least once</mark>. A crash inside the Activity means a retry. No durable runtime can make an external side effect exactly-once on its own. You need the payment provider's help.",
+          "caption": "Temporal sees the dead Worker when the Activity's 6s start-to-close timeout passes, and retries: attempt 2, then <mark class=\"weak\">$ moved ×2</mark>.<br><br>A completed Activity is recorded once and never re-run, but an Activity <mark class=\"weak\">executes at least once</mark>: a crash inside it means a retry. No runtime makes an external side effect exactly-once alone; you need the payment provider's help.",
           "actions": [
             {
               "post": "/api/runs/continue",
@@ -459,14 +443,10 @@
         {
           "title": "Resume ADK: one refund",
           "side": "adk",
-          "caption": "<mark class=\"strong\">One refund, one deduplicated retry</mark>: the provider saw the same key and returned the original refund.",
-          "actions": [
-            {
-              "post": "/api/adk/recover"
-            }
-          ],
+          "caption": "Click <span class=\"do\">Run recovery scan + resume</span> in the ADK column, once more.<br><br><mark class=\"strong\">One refund, one deduplicated retry</mark>: the provider saw the same key and returned the original refund.",
+          "actions": [],
           "waitFor": [
-            "adk_done"
+            "adk_recovered"
           ],
           "focus": [
             "refund_payment"
@@ -475,7 +455,7 @@
         {
           "title": "The same crash on Temporal: one refund",
           "side": "temporal",
-          "caption": "<mark class=\"strong\">One refund, one deduplicated retry</mark> here too. With a key, both are safe at this crash point.<br><br>What's different: (1) Temporal's window for a repeat is only inside the Activity; ADK's also covers the gap between the tool returning and the session write, which is the first crash we saw. (2) Temporal needed no one to resume it. (3) The retry, its timeout and its backoff are declared per Activity (<a href=\"#temporal/refund_payment\" data-code=\"temporal/refund_payment\" data-hl=\"TOOL_OPTIONS\"><code>TOOL_OPTIONS</code></a>), and every attempt is in the history.",
+          "caption": "<mark class=\"strong\">One refund, one deduplicated retry</mark> here too.<br><br>What's different: (1) Temporal's repeat window is only inside the Activity; ADK's also covers the gap before the session write, the first crash we saw. (2) Nobody resumed Temporal. (3) Retries, timeouts and backoff are declared per Activity (<a href=\"#temporal/refund_payment\" data-code=\"temporal/refund_payment\" data-hl=\"TOOL_OPTIONS\"><code>TOOL_OPTIONS</code></a>), every attempt in the history.",
           "actions": [
             {
               "post": "/api/runs/continue",
@@ -518,7 +498,7 @@
       "steps": [
         {
           "title": "A policy with a deadline",
-          "caption": "Refunds over $250 need a manager's approval within 48 hours. Past the deadline, deny the refund and escalate. For the demo, 48 hours is 20 seconds.<br><br>Both sides pause the same way, with ADK's own tool confirmation, and both enforce the deadline. ADK: when the invocation pauses, the host starts a timer in its own memory, the simplest deadline an ADK host can keep. Temporal: the Workflow waits with a timeout, a durable timer.<span class=\"code-links\">Read the code: <a href=\"#adk/approval\" data-code=\"adk/approval\">ADK's pause and timer</a><a href=\"#temporal/approval\" data-code=\"temporal/approval\">Temporal's wait</a></span><br>The ADK column plays first, then the Temporal column, each with its own 20-second wait.",
+          "caption": "Refunds over $250 need a manager's approval within 48 hours (20 seconds here); past the deadline, deny and escalate.<br><br>Both sides pause with ADK's tool confirmation. ADK: the host keeps the deadline as a timer in its memory. Temporal: the Workflow waits with a timeout, a durable timer.<span class=\"code-links\">Read the code: <a href=\"#adk/approval\" data-code=\"adk/approval\">ADK's pause and timer</a><a href=\"#temporal/approval\" data-code=\"temporal/approval\">Temporal's wait</a></span><br>ADK plays first, then Temporal, each with a 20-second wait.",
           "actions": [
             {
               "post": "/api/reset"
@@ -581,7 +561,7 @@
         {
           "title": "A late approval still resumes ADK",
           "side": "adk",
-          "caption": "A manager approves the ADK refund after the deadline. ADK resumes from the paused state and refunds $500: <mark class=\"strong\">resumable, yes</mark>.<br><br><mark class=\"weak\">But the policy said: past the deadline, deny and escalate. Nothing acted when the deadline passed, so a refund the policy should have denied went through.</mark> Resuming late is not acting on time.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://adk.dev/tools-custom/confirmation/#:~:text=If%20your%20ADK%20agent%20workflow%20is%20configured%20with%20the%20Resume%20feature\" target=\"_blank\" rel=\"noopener\">ADK docs: Tool confirmation with Resume ↗</a></span>",
+          "caption": "A manager approves after the deadline. ADK resumes and refunds $500: <mark class=\"strong\">resumable, yes</mark>.<br><br><mark class=\"weak\">But the policy said deny and escalate at the deadline. Nothing acted, so a refund the policy should have denied went through.</mark> Resuming late is not acting on time.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://adk.dev/tools-custom/confirmation/#:~:text=If%20your%20ADK%20agent%20workflow%20is%20configured%20with%20the%20Resume%20feature\" target=\"_blank\" rel=\"noopener\">ADK docs: Tool confirmation with Resume ↗</a></span>",
           "actions": [
             {
               "post": "/api/approve",
@@ -636,7 +616,7 @@
         {
           "title": "Past the deadline: bring Worker A back",
           "side": "temporal",
-          "caption": "The timer fired on the Temporal Server while no Worker was running. Worker A picks it up, opens a manager ticket (see <i>Escalations</i>), denies the refund and the agent tells the customer. That logic is the <a href=\"#temporal/approval\" data-code=\"temporal/approval\" data-hl=\"asyncio.TimeoutError\"><code>except asyncio.TimeoutError</code></a> branch in <a href=\"#temporal/approval\" data-code=\"temporal/approval\" data-hl=\"_await_manager\"><code>_await_manager</code></a>.<br><br>On Temporal, acting on time is a timeout argument and an exception handler, and the timer survives the loss of every Worker.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/workflow-execution/timers-delays#:~:text=Timers%20in%20Temporal%20are%20persisted\" target=\"_blank\" rel=\"noopener\">Temporal docs: Durable timers ↗</a></span>",
+          "caption": "The timer fired on the Temporal Server with no Worker running. Worker A picks it up, opens a manager ticket, denies the refund and tells the customer: the <a href=\"#temporal/approval\" data-code=\"temporal/approval\" data-hl=\"asyncio.TimeoutError\"><code>except asyncio.TimeoutError</code></a> branch in <a href=\"#temporal/approval\" data-code=\"temporal/approval\" data-hl=\"_await_manager\"><code>_await_manager</code></a>.<br><br>Acting on time is a timeout and an exception handler, and the timer survives losing every Worker.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/workflow-execution/timers-delays#:~:text=Timers%20in%20Temporal%20are%20persisted\" target=\"_blank\" rel=\"noopener\">Temporal docs: Durable timers ↗</a></span>",
           "actions": [
             {
               "post": "/api/processes/worker-a/start"

@@ -46,6 +46,10 @@
   /* One call to action on the page: the player's Next. A button in the columns that matters right
      now is outlined in the outcome colour, never filled. */
   button.attention { border-color: var(--bad); color: var(--bad); font-weight: 600; }
+  /* The one thing the presenter has to do by hand (ADK's recovery scan): it pulses until clicked. */
+  button.cta { animation: cta-pulse 1.3s ease-out infinite; }
+  @keyframes cta-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 70%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+  .caption .do { padding: 0 6px; border: 1px solid var(--bad); border-radius: 6px; color: var(--bad); font-size: .92em; font-weight: 600; white-space: nowrap; }
   button.danger { color: var(--bad); }
   button.small { padding: 2px 8px; font-size: 12px; }
   button:disabled { opacity: .45; cursor: default; }
@@ -143,11 +147,11 @@
   .guide-bubble { flex: 1 1 auto; min-width: 0; padding: 12px 16px 14px; border: 1px solid var(--border); border-radius: 4px 14px 14px 14px;
                   background: var(--panel); line-height: 1.6; }
   .guide-bubble.is-streaming { cursor: pointer; }
-  .guide-kicker { margin: 0; color: var(--accent); font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .guide-kicker { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
   .guide-msg.adk .guide-kicker { color: var(--adk); } .guide-msg.temporal .guide-kicker { color: var(--tmp); }
-  .guide-kicker .scenario-name { display: block; margin-bottom: 2px; color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 700; }
-  .guide-title { margin: 2px 0 8px; font-size: 18px; line-height: 1.25; }
-  .caption { font-size: 15px; }
+  .guide-kicker .scenario-name { display: block; margin-bottom: 2px; color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 12px; font-weight: 700; }
+  .guide-title { margin: 2px 0 8px; font-size: 16px; line-height: 1.25; }
+  .caption { font-size: 13.5px; }
   .caption code { background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
   /* The one kind of emphasis in a caption: a highlighter stroke, swept in like the claims'. Green for what a
      runtime does for you, yellow for a caution: what plain ADK leaves to you. No bold. */
@@ -158,7 +162,7 @@
   .caption mark.weak { --v: var(--warn); } .caption mark.strong { --v: var(--ok); }
   .caption a.ext { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 2px; }
   .caption a.ext:hover { text-decoration-color: currentColor; }
-  .caption .proves { margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .caption .proves { margin-top: 8px; font-size: 12px; color: var(--muted); }
   /* "Read the code" links in a caption: the code itself opens in the dialog. */
   /* In a sentence: an ordinary link. */
   .caption a[data-code] { color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline;
@@ -167,7 +171,7 @@
   /* Code in a sentence that opens the code: the link's color and underline on the code chip. */
   .caption a[data-code] code { color: inherit; font-weight: 500; }
   /* "Read the code:" under a paragraph: small pills, each opening the code. */
-  .caption .code-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+  .caption .code-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--muted); }
   .caption .code-links a { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border: 1px solid var(--border-strong);
                                       border-radius: 999px; background: var(--panel); text-decoration: none; white-space: nowrap; }
   .caption .code-links a[data-code]::after { content: "›"; font-weight: 700; }
@@ -207,11 +211,11 @@
   .pins .thesis-line:not(.on) mark { animation: none; background-size: 100% 100%; }
   .pins .toggle-full { justify-self: end; font-size: 11px; color: var(--muted); }
   .pins:hover .toggle-full { color: var(--accent); }
-  .waiting { display: flex; align-items: center; gap: 8px; padding-left: 38px; font-size: 13px; color: var(--warn); }
+  .waiting { display: flex; align-items: center; gap: 8px; padding-left: 38px; font-size: 12px; color: var(--warn); }
   .waiting::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: wait-pulse 1.2s ease-in-out infinite; }
   @keyframes wait-pulse { 50% { opacity: .25; } }
   /* A timed wait (the model outage, the approval deadline), counting down: the number large, a bar draining to zero. */
-  .waiting .count { display: grid; gap: 4px; flex: 1; font-size: 14px; }
+  .waiting .count { display: grid; gap: 4px; flex: 1; font-size: 13px; }
   .waiting .count b { font-size: 18px; font-variant-numeric: tabular-nums; }
   .waiting .count i { display: block; height: 4px; border-radius: 2px; background: var(--warn-bg); overflow: hidden; }
   .waiting .count i::before { content: ""; display: block; height: 100%; width: var(--left, 100%); background: currentColor;
@@ -240,6 +244,7 @@
   @media (prefers-reduced-motion: reduce) {
     .stream-caret, .waiting::before, .guide-msg, .replies { animation: none; }
     .thesis mark, .pins mark, .caption mark { animation: none; background-size: 100% 100%; }
+    .side.crash-shake, .crash-fx .stamp, .proc.just-crashed, button.cta { animation: none; }
   }
 
   .caption table.wrap-table { margin: 10px 0 4px; font-size: 13.5px; border-collapse: separate; border-spacing: 0 4px; }
@@ -274,7 +279,12 @@
     body:not(.content-only) .acts .long { display: none; }
     body:not(.content-only) .acts .short, body:not(.content-only) .acts .tabs-label { display: inline; }
     body:not(.content-only) .acts button { min-width: 32px; }
-    body:not(.content-only) .thread { flex: 1; overflow-y: auto; overscroll-behavior: contain; position: relative; }
+    body:not(.content-only) .thread { flex: 1; overflow-y: auto; overscroll-behavior: contain; position: relative; padding: 12px 12px 14px; gap: 10px; }
+    /* The docked pane is narrow: every dialog has to fit it without scrolling, so the captions get its whole
+       width (no avatar column, no indent under it) and the bubble's padding is tight. */
+    body:not(.content-only) .guide-avatar { display: none; }
+    body:not(.content-only) .guide-bubble { padding: 10px 13px 12px; }
+    body:not(.content-only) .replies, body:not(.content-only) .waiting { padding-left: 0; }
   }
 
   /* Two columns */
@@ -291,6 +301,21 @@
   .side.resting { opacity: .5; filter: saturate(.6); }
   .side.resting:hover, .side.resting:focus-within { opacity: .85; filter: none; }
   .side.playing { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+  /* A process dies: its column jolts, flashes red and is stamped for a moment; its chip pulses. */
+  .side { position: relative; }
+  .side.crash-shake { animation: crash-shake .4s cubic-bezier(.36, .07, .19, .97) both; }
+  @keyframes crash-shake { 20%, 60% { transform: translateX(-3px); } 40%, 80% { transform: translateX(3px); } }
+  .crash-fx { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; pointer-events: none; border-radius: inherit;
+              background: color-mix(in srgb, var(--bad) 7%, transparent);
+              box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--bad) 70%, transparent); animation: crash-flash 1.5s ease-out forwards; }
+  @keyframes crash-flash { 0% { opacity: 0; } 8% { opacity: 1; } 55% { opacity: 1; } 100% { opacity: 0; } }
+  .crash-fx .stamp { padding: 6px 14px; border: 1.5px solid var(--bad); border-radius: 8px; color: var(--bad); text-align: center;
+                     background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: 0 6px 20px rgb(0 0 0 / .25);
+                     font: 700 16px/1.2 system-ui, sans-serif; animation: crash-stamp .25s ease-out both; }
+  .crash-fx .stamp small { display: block; margin-top: 2px; font: 500 11px ui-monospace, monospace; color: var(--muted); }
+  @keyframes crash-stamp { from { opacity: 0; transform: scale(1.15); } to { opacity: 1; transform: scale(1); } }
+  .proc.just-crashed { animation: chip-hit .9s ease-out; }
+  @keyframes chip-hit { 0% { background: var(--bad-bg); box-shadow: 0 0 0 0 color-mix(in srgb, var(--bad) 60%, transparent); } 100% { box-shadow: 0 0 0 6px transparent; } }
   @media (prefers-reduced-motion: reduce) { .side { transition: none; } }
   .side-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: start; }
   .side-head h2 { color: var(--c); }
@@ -306,6 +331,8 @@
   .proc.crashed { border-style: dashed; border-color: var(--border-strong); }
   .proc.crashed .state { background: transparent; box-shadow: inset 0 0 0 1.5px var(--faint); }
   .proc.crashed b { color: var(--muted); font-weight: 600; }
+  /* A dead process is crossed out: "Worker A crashed · ↻ 1". */
+  .proc.crashed > span:not(.state) { text-decoration: line-through; text-decoration-thickness: 1.5px; text-decoration-color: var(--muted); }
   /* The body is a size container, not the column: containment on the column would cancel its subgrid. */
   .side-body { container: sidebody / inline-size; min-width: 0; }
   .side-body > .body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
@@ -544,7 +571,7 @@ const NODES = [
 const SIDES = {
   adk: { title: "Google ADK", stack: "ResumabilityConfig(is_resumable=True) · SqliteSessionService",
          procs: ["adk-a", "adk-b"] },
-  temporal: { title: "Temporal + ADK plugin", stack: "same agent · GoogleAdkPlugin · Activities · event history",
+  temporal: { title: "Temporal + ADK plugin", stack: "same agent, Temporal wraps ADK with durable execution",
               procs: ["worker-a", "worker-b"] },
 };
 const CRASH_LABEL = { refund_charged: "crash inside the tool", refund_returned: "crash after it returns", before_notify: "crash before notify", batch_partial: "crash mid-batch" };
@@ -745,6 +772,8 @@ const temporalFinished = (st) => Boolean(st.temporal && st.temporal.status && st
 const PREDICATES = {
   temporal_done: (st) => temporalFinished(st),
   adk_done: (st) => adkFinished(st),
+  // The same outcome, but no action brings it: the presenter clicks the recovery scan themselves.
+  adk_recovered: (st) => adkFinished(st),
   adk_unfinished: (st) => {
     const a = st.processes.find((p) => p.key === "adk-a");
     return adkFinished(st)
@@ -765,7 +794,8 @@ const PREDICATES = {
 // this, something went off script: the player offers to move on anyway.
 const STUCK_MS = 45000;
 const PREDICATE_TEXT = {
-  temporal_done: "Temporal finishing", adk_done: "ADK finishing", adk_unfinished: "ADK host A to crash and restart",
+  temporal_done: "Temporal finishing", adk_done: "ADK finishing",
+  adk_recovered: "you to run the recovery scan in the ADK column", adk_unfinished: "ADK host A to crash and restart",
   adk_awaiting: "ADK to wait for a manager", temporal_awaiting: "Temporal to wait for a manager",
   deadline_passed: "the approval deadline to pass", temporal_timer_fired: "the deadline to pass and the timer to fire",
   adk_stopped: "the ADK invocation to stop", worker_a_down: "Worker A to crash", outage_over: "the model outage to end",
@@ -922,17 +952,16 @@ function message(act) {
         h("h2", { class: "guide-title" }, act.title),
         h("div", { class: "caption" },
           act.compare ? h("p", { style: "margin:0" }, "The claim this scenario puts to the test:") : null,
+          // Only the claim: the intro has to fit the pane, and Start says the rest.
           thesis(act),
-          h("p", { style: act.compare ? "margin:10px 0 0" : "margin:0" }, act.contentOnly ? "Press Start (or →) to step through it."
-            : "Each step runs its actions when you reach it: real processes, real crashes. Press Start (or →)."),
-          act.proves && act.proves.length ? h("p", { class: "proves" }, "Comparison rows this scenario tests: ", act.proves.join(" · ")) : null)));
+          act.compare ? null : h("p", { style: "margin:0" }, "Press Start (or →) to step through it."))));
   }
   const where = `step ${stepIndex + 1} of ${act.steps.length}`;
   return h("article", { class: `guide-msg ${step.side || ""}` },
     h("span", { class: "guide-avatar", "aria-hidden": "true" }, "✦"),
     h("div", { class: "guide-bubble" },
       // The scenario's name on every step, not only its intro; under it, whose step and how far in.
-      h("p", { class: "guide-kicker" }, h("span", { class: "scenario-name" }, act.title),
+      h("p", { class: "guide-kicker" }, h("span", { class: "scenario-name" }, act.title.replace(/^Scenario \d+ · /, "")),
         [step.side && sideLabel(step.side), where].filter(Boolean).join(" · ")),
       h("h2", { class: "guide-title" }, step.title),
       h("div", { class: "caption", html: step.caption })));
@@ -1165,7 +1194,7 @@ function renderProcs(side) {
     // The dot and the button say running or stopped; spell out only the states worth noticing.
     const label = { running: "", stopped: "", crashed: "crashed", restarting: "restarting…" }[p.state];
     const extra = [label, p.restarts ? `↻ ${p.restarts}` : ""].filter(Boolean).join(" · ");
-    return h("span", { class: `proc ${p.state}`, title: `${p.label}: ${p.state}${p.state === "crashed" ? ` (exit ${p.exit_code})` : ""}${p.restarts ? `, restarted ${p.restarts}×` : ""}` }, h("span", { class: "state" }),
+    return h("span", { class: `proc ${p.state} ${crashFx[key] > Date.now() ? "just-crashed" : ""}`, title: `${p.label}: ${p.state}${p.state === "crashed" ? ` (exit ${p.exit_code})` : ""}${p.restarts ? `, restarted ${p.restarts}×` : ""}` }, h("span", { class: "state" }),
       // Inside the ADK column, "Host A" says enough (the tooltip has the full name).
       h("span", {}, h("b", {}, p.label.replace(/^ADK host/, "Host")), extra ? [" ", h("span", { class: "muted" }, extra)] : null),
       running ? h("button", { class: "small danger", title: "SIGKILL this process", onclick: () => post(`/api/processes/${key}/kill`).then(refresh) }, "kill -9")
@@ -1293,7 +1322,8 @@ function renderRecovery(side, p) {
         rec.resumed.length > 1 ? h("b", {}, rec.resumed.map((r) => `host ${r.host.toUpperCase()}`).join(" and "), ": the same invocation, twice")
                                : `host ${rec.resumed[0].host.toUpperCase()}`) : null,
       h("div", { style: "margin-top:6px;display:flex;gap:6px;flex-wrap:wrap" },
-        h("button", { class: orphan ? "small attention" : "small", onclick: () => post("/api/adk/recover").then(refresh) }, "Run recovery scan + resume"),
+        h("button", { class: `small ${orphan ? "attention" : ""} ${orphan && pendingWaits().includes("adk_recovered") ? "cta" : ""}`,
+                      onclick: () => post("/api/adk/recover").then(refresh) }, "Run recovery scan + resume"),
         state.processes.filter((x) => x.side === "adk" && x.state === "running").length > 1
           ? h("button", { class: "small", title: "Every live host runs the scan at the same moment, as replicas scanning on startup would",
                           onclick: () => post("/api/adk/recover", { hosts: "all" }).then(refresh) }, "Scan on every host") : null));
@@ -1614,10 +1644,41 @@ function renderAll() {
   if (dialogState && dialogState.tab === "persisted") renderDialog();
 }
 
+// A process that died since the last poll: a kill -9 or a crash point, not a stop (Scenario 4
+// stops hosts on purpose) or a reset. A quick auto-restart shows only as one more restart.
+const crashFx = {};
+let lastProcs = null;
+function noticeCrashes() {
+  const before = lastProcs;
+  lastProcs = Object.fromEntries(state.processes.map((p) => [p.key, p]));
+  if (!before) return;
+  for (const p of state.processes) {
+    const was = before[p.key];
+    if (!was || p.side === "system") continue;
+    const died = was.state === "running" && (p.state === "crashed" || p.state === "restarting" || p.restarts > was.restarts);
+    if (died) crash(p);
+  }
+}
+function crash(p) {
+  crashFx[p.key] = Date.now() + 1000;
+  const column = document.getElementById(`side-${p.side}`);
+  if (!column) return;
+  column.querySelector(".crash-fx")?.remove();
+  column.classList.remove("crash-shake");
+  void column.offsetWidth;  // restart the animation if one is still playing
+  column.classList.add("crash-shake");
+  const name = p.label.replace(/^ADK host/, "Host");
+  const fx = h("div", { class: "crash-fx", "aria-hidden": "true" },
+    h("div", { class: "stamp" }, `⚡ ${name} killed`, h("small", {}, `exit ${p.exit_code ?? 137}, like kill -9`)));
+  column.append(fx);
+  setTimeout(() => { fx.remove(); column.classList.remove("crash-shake"); }, 1600);
+}
+
 async function refresh() {
   const res = await api("/api/state");
   if (res.status === 200) {
     state = res.body;
+    noticeCrashes();
     renderAll();
     maybeAutoplay();
   }
@@ -1637,7 +1698,8 @@ new ResizeObserver(([entry]) => document.documentElement.style.setProperty(
   "--header-h", `${Math.round(entry.target.getBoundingClientRect().height)}px`)).observe(document.querySelector("header"));
 
 (async function main() {
-  const res = await api("/static/scenarios.json");
+  // Never a cached copy: the scenarios change with the demo, and a stale one runs old actions.
+  const res = await api("/static/scenarios.json", { cache: "no-store" });
   scenarios = res.body ? res.body.acts : [];
   if (actIndex >= scenarios.length) actIndex = 0;
   await refresh();

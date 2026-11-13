@@ -118,3 +118,24 @@ def test_code_in_a_caption_opens_that_code(page):
     page.locator("#player .msg-slot a[data-hl='retry_options=MODEL_RETRY']").first.click()
     page.wait_for_selector("dialog[open] pre.code .cl.hl")
     assert all("retry_options=MODEL_RETRY" in line for line in page.locator("dialog pre.code .cl.hl").all_inner_texts())
+
+
+def test_every_dialog_fits_the_pane(page):
+    """Every scenario's intro and every step's message fit the docked pane at 1490x811, without scrolling.
+
+    Each message is rendered in place (no actions run) and typed out at once; the pane's thread must
+    not overflow. A caption that does needs shortening, not a scrollbar."""
+    overflowing = page.evaluate("""async () => {
+      const out = [];
+      for (let a = 0; a < scenarios.length; a++) {
+        for (let s = -1; s < scenarios[a].steps.length; s++) {
+          actIndex = a; stepIndex = s; renderAll(); finishTyping(); renderPlayer();
+          await new Promise((r) => setTimeout(r, 30)); finishTyping(); renderPlayer();
+          if (document.body.classList.contains('content-only')) continue;  // the wrap-up scrolls the page
+          const thread = document.querySelector('#player .thread');
+          const over = thread.scrollHeight - thread.clientHeight;
+          if (over > 0) out.push(`${scenarios[a].short} ${s < 0 ? 'intro' : 'step ' + (s + 1)}: ${over}px too tall`);
+        }
+      }
+      return out; }""")
+    assert not overflowing, overflowing

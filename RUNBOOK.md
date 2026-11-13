@@ -30,7 +30,7 @@ For whoever presents the demo. About 24 minutes for all four scenarios and the w
 |---|---|---|
 | Set the stage | The two stack lines under the column titles; ADK hosts A and B and Worker A running, auto-restart **off** | Same `agent.py` on both sides. ADK is configured properly: resumability on, a persistent session database. ADK's spare is ready; Temporal's starts once Worker A is gone. |
 | ADK: host A dies | Host A *crashed*, host B running; chip *unfinished · nobody working on it* | Click ADK's *Who resumes?* panel to show `recovery.py`. |
-| Run the recovery scan | ADK completes, still one refund | ADK resumability works. The question is who owns triggering it. |
+| Run the recovery scan | Next waits: **you** click *Run recovery scan + resume* in the ADK column (it pulses). ADK completes, still one refund | ADK resumability works. The question is who owns triggering it: here, you did. The resumes in Scenarios 2 and 3 work the same way. |
 | Temporal: Worker A dies | *by Worker A* on `refund_payment` and `record_refund`; no Worker running | The Workflow waits on the Temporal Server. |
 | Start Worker B | Temporal completes within about 5s; `notify_customer` reads *by Worker B*, the earlier steps still *by Worker A* | Nobody called anything: the next Worker on the task queue took it. |
 
