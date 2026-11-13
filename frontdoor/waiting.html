@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumable vs durable agent</title>
+<style>
+  :root { --bg: #f8fafc; --panel: #ffffff; --text: #141414; --muted: #626b7a; --border: #d8dee8;
+          --accent: #444ce7; --adk: #0e7490; --bad: #c2410c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1115; --panel: #16181d; --text: #e7ebf2; --muted: #9aa3b2; --border: #2a2e37;
+            --accent: #818cf8; --adk: #22d3ee; --bad: #fb923c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: var(--bg);
+         color: var(--text); font: 15px/1.55 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .card { width: min(560px, 100%); padding: 26px 28px; border: 1px solid var(--border); border-radius: 14px;
+          background: var(--panel); border-top: 4px solid var(--accent); }
+  .kicker { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--accent); }
+  h1 { margin: 4px 0 10px; font-size: 21px; line-height: 1.25; }
+  p { margin: 0 0 10px; color: var(--muted); }
+  .status { display: flex; align-items: center; gap: 10px; margin: 16px 0 4px; font-weight: 600; color: var(--text); }
+  .spin { flex: none; width: 18px; height: 18px; border-radius: 50%; border: 2.5px solid color-mix(in srgb, var(--accent) 25%, transparent);
+          border-top-color: var(--accent); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+  .status.bad { color: var(--bad); } .status.bad .spin { display: none; }
+  .elapsed { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  button { margin-top: 14px; font: inherit; font-weight: 700; font-size: 13.5px; padding: 7px 16px; border-radius: 999px;
+           border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button[hidden] { display: none; }
+  code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; }
+</style>
+</head>
+<body>
+<main class="card" aria-live="polite">
+  <p class="kicker">Your own stage</p>
+  <h1>Resumable agent vs durable agent</h1>
+  <p>Every visitor gets a private copy of the whole demo: the business systems, two ADK hosts, two Temporal Workers
+     and a Temporal dev server, in a sandbox of their own. Crash anything; nobody else is affected.</p>
+  <div class="status" id="status"><span class="spin" aria-hidden="true"></span><span id="message">Looking for your stage…</span></div>
+  <div class="elapsed" id="elapsed">About 15 seconds the first time.</div>
+  <button id="retry" type="button" hidden>Try again</button>
+</main>
+<script>
+"use strict";
+const status = document.getElementById("status");
+const message = document.getElementById("message");
+const elapsed = document.getElementById("elapsed");
+const retry = document.getElementById("retry");
+const t0 = Date.now();
+let timer = 0;
+
+async function call(method, path) {
+  try {
+    const res = await fetch(path, { method, headers: { accept: "application/json" }, credentials: "same-origin" });
+    return await res.json();
+  } catch { return { state: "finding", message: "Reaching the front door…" }; }
+}
+
+function show(s) {
+  message.textContent = s.message || "Starting your stage…";
+  const bad = s.state === "error" || s.state === "full";
+  status.classList.toggle("bad", bad);
+  retry.hidden = !bad;
+  if (!bad) elapsed.textContent = `${Math.round((Date.now() - t0) / 1000)}s`;
+  else elapsed.textContent = "";
+}
+
+async function poll() {
+  const s = await call("GET", "/_stage/status");
+  if (s.state === "ready") { location.reload(); return; }
+  if (s.state === "none") { show(await call("POST", "/_stage/start")); }
+  else show(s);
+  if (s.state !== "error" && s.state !== "full") timer = setTimeout(poll, 1000);
+}
+
+retry.addEventListener("click", async () => {
+  clearTimeout(timer);
+  show(await call("POST", "/_stage/start"));
+  timer = setTimeout(poll, 1000);
+});
+call("POST", "/_stage/start").then((s) => { show(s); timer = setTimeout(poll, 1000); });
+</script>
+</body>
+</html>

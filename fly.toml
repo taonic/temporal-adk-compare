@@ -1,34 +1,46 @@
-# Fly.io deployment of the whole demo. Deployed by .github/workflows/deploy.yml.
+# Fly.io deployment of the front door. Deployed by .github/workflows/deploy.yml.
 #
-# One machine only (deploy with --ha=false): the demo keeps its state in that
-# machine's processes and files, and every viewer shares the same demo.
+# Every visitor gets a stage of their own: a Daytona sandbox running the whole demo
+# (frontdoor/). This machine only creates, wakes and proxies to those sandboxes, so it stays
+# small, and it keeps nothing that matters: sandboxes are found again by their Daytona labels.
+# One machine (deploy with --ha=false): each machine keeps its own in-memory progress and
+# preview-URL cache.
+#
+# Secrets: DAYTONA_API_KEY (fly secrets set DAYTONA_API_KEY=...).
 
 app = "temporal-adk-compare"
 primary_region = "sjc"
 
 [build]
+  dockerfile = "frontdoor/Dockerfile"
 
 [env]
-  TEMPORAL_UI = "https://temporal-adk-compare.fly.dev:8233"
+  # Where visitors reach the Temporal UI: this app's port 8233 (the UI proxy below).
+  PUBLIC_UI_BASE = "https://temporal-adk-compare.fly.dev:8233"
+  # At most this many stages run at once (2 vCPU and 2 GiB each on Daytona).
+  MAX_SANDBOXES = "20"
+  AUTO_STOP_MINUTES = "15"
+  AUTO_DELETE_MINUTES = "1440"
 
-# The demo UI and API.
+# The demo, proxied to each visitor's sandbox.
 [http_service]
-  internal_port = 8400
+  internal_port = 8080
   force_https = true
   auto_stop_machines = "stop"
   auto_start_machines = true
   min_machines_running = 0
 
   [[http_service.checks]]
-    grace_period = "60s"
+    grace_period = "20s"
     interval = "30s"
     timeout = "5s"
     method = "GET"
-    path = "/"
+    path = "/_stage/health"
 
-# The Temporal dev server's Web UI, for the "open in Temporal UI" links.
+# The Temporal UI of the visitor's sandbox: it uses root-absolute paths, so it needs an
+# origin of its own. Same host, so the visitor's cookie reaches it.
 [[services]]
-  internal_port = 8233
+  internal_port = 8081
   protocol = "tcp"
   auto_stop_machines = "stop"
   auto_start_machines = true
@@ -38,5 +50,5 @@ primary_region = "sjc"
     handlers = ["tls", "http"]
 
 [[vm]]
-  size = "shared-cpu-2x"
-  memory = "2gb"
+  size = "shared-cpu-1x"
+  memory = "512mb"

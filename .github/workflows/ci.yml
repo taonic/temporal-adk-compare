@@ -42,3 +42,7 @@ jobs:
 
       - name: Build the container image
         run: docker build -t temporal-adk-compare .
+
+      # What Fly runs: the front door that gives each visitor a Daytona sandbox of their own.
+      - name: Build the front door image
+        run: docker build -f frontdoor/Dockerfile -t temporal-adk-compare-frontdoor .

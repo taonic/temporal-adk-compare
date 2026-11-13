@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/taonic/temporal-adk-compare/actions/workflows/ci.yml/badge.svg)](https://github.com/taonic/temporal-adk-compare/actions/workflows/ci.yml)
 
-Live demo: <https://temporal-adk-compare.fly.dev> (shared by everyone who opens it).
+Live demo: <https://temporal-adk-compare.fly.dev>. Every visitor gets a private copy of the whole demo, in a [Daytona](https://www.daytona.io) sandbox of their own: crash anything, nobody else is affected.
 
 One Google ADK agent runs on two runtimes side by side, through the same crashes:
 
@@ -197,10 +197,17 @@ Temporal owns the lifecycle of the business process; ADK owns the agent's reason
 
 Two GitHub Actions workflows:
 
-- [ci.yml](.github/workflows/ci.yml) runs the unit and scenario tests (real processes, a real Temporal dev server) and builds the container image, on every push and pull request.
-- [deploy.yml](.github/workflows/deploy.yml) deploys `main` to Fly.io once CI has passed on it, with `flyctl deploy --remote-only --ha=false`. It needs a `FLY_API_TOKEN` repository secret (`fly tokens create deploy`).
+- [ci.yml](.github/workflows/ci.yml) runs the unit and scenario tests (real processes, a real Temporal dev server) and builds both container images, on every push and pull request.
+- [deploy.yml](.github/workflows/deploy.yml) deploys `main` once CI has passed on it: it builds the visitors' sandbox snapshot on Daytona if its inputs changed, then deploys the front door to Fly.io with `flyctl deploy --remote-only --ha=false`. It needs the repository secrets `FLY_API_TOKEN` (`fly tokens create deploy`) and `DAYTONA_API_KEY`, and the Fly secret `DAYTONA_API_KEY` (`fly secrets set DAYTONA_API_KEY=...`).
 
-The [Dockerfile](Dockerfile) runs the whole demo in one container, exactly as `make demo` does: the API starts the business systems, the ADK hosts, the Workers and a Temporal dev server. [fly.toml](fly.toml) keeps it to one machine, because the demo's state lives in that machine's processes. The Temporal Web UI is on port 8233 of the same host.
+The live demo gives every visitor a stage of their own, so nobody's crash or reset reaches anyone else:
+
+- **The front door** ([frontdoor/](frontdoor/), on Fly.io) gives each visitor a cookie and a [Daytona](https://www.daytona.io) sandbox, found again by its labels, and proxies the visitor's requests to it: the demo on the usual port, the Temporal UI on port 8233. While the stage starts (about 15 seconds the first time), it shows a waiting page. It caps how many stages run at once (`MAX_SANDBOXES` in [fly.toml](fly.toml)).
+- **Each sandbox** is created from a snapshot of the demo's dependencies ([frontdoor/sandbox.Dockerfile](frontdoor/sandbox.Dockerfile), built by `python -m frontdoor.snapshot`, named after a hash of its inputs). The front door uploads the current `refund_demo/` into it and runs `python -m refund_demo.api`, exactly as `make demo` does. A sandbox stops after 15 idle minutes and is deleted a day later; the next visit wakes it.
+
+To run the front door locally against Daytona: `DAYTONA_API_KEY=... uv run --group frontdoor python -m frontdoor`, then open <http://localhost:8080>.
+
+The [Dockerfile](Dockerfile) still runs the whole demo in one container, exactly as `make demo` does, for anyone who wants it in Docker.
 
 ## Limits
 

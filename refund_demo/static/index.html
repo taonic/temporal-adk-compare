@@ -1516,6 +1516,9 @@ async function refresh() {
     renderAll();
     maybeAutoplay();
   }
+  // Behind the hosted front door (frontdoor/), this visitor's stage stopped while idle: reload to
+  // its "Waking your stage…" page. Run locally, the demo never answers this.
+  else if (res.status === 503 && res.body && res.body.stage) location.reload();
 }
 
 document.addEventListener("keydown", (e) => {

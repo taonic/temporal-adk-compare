@@ -1,7 +1,9 @@
 name: Deploy to Fly.io
 
-# Deploys main to https://temporal-adk-compare.fly.dev once CI has passed on it.
-# Needs the FLY_API_TOKEN repository secret (a deploy token: `fly tokens create deploy`).
+# Deploys main to https://temporal-adk-compare.fly.dev once CI has passed on it: the visitors'
+# sandbox snapshot on Daytona (if its inputs changed), then the front door on Fly.
+# Needs the repository secrets FLY_API_TOKEN (a deploy token: `fly tokens create deploy`) and
+# DAYTONA_API_KEY, and the Fly secret DAYTONA_API_KEY (`fly secrets set DAYTONA_API_KEY=...`).
 on:
   workflow_run:
     workflows: [CI]
@@ -28,9 +30,20 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
+      # The visitors' sandbox snapshot on Daytona, before the front door that asks for it. Its
+      # name is a hash of its inputs, so this takes a few seconds unless the dependencies changed.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+
+      - name: Build the sandbox snapshot (if it changed)
+        run: uv run --frozen --only-group frontdoor python -m frontdoor.snapshot
+        env:
+          DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+
       - uses: superfly/flyctl-actions/setup-flyctl@1.6
 
-      # One machine: the demo's state lives in that machine's processes.
+      # One machine: it keeps the in-memory progress of the stages it is starting.
       - name: Deploy
         run: flyctl deploy --remote-only --ha=false
         env:
