@@ -40,6 +40,9 @@ jobs:
       - name: Act tests
         run: uv run pytest tests/test_acts.py
 
+      - name: Front door tests (only a person's browser starts a sandbox)
+        run: uv run --frozen --group frontdoor pytest tests/test_frontdoor.py
+
       - name: Build the container image
         run: docker build -t temporal-adk-compare .
 

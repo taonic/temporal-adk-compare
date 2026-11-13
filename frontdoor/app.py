@@ -9,17 +9,25 @@ Until the visitor's stage is ready, the demo's paths answer with a waiting page 
 and shows its progress. A sandbox that stopped while idle is noticed by the proxy, and the page
 goes back to waiting while it wakes. Adapted from temporal-agent-governance-workshop's
 course/runner/proxy.mjs and server.mjs.
+
+A stage costs a sandbox, so only a person's browser starts one, never a crawler:
+    - loading a page starts nothing; the waiting page's script asks for the stage (POST /_stage/start)
+    - that request needs the cookie the page set and a header only the page's script sends
+    - known bots and headless browsers are turned away, and robots.txt keeps crawlers off /_stage/
+    - each IP starts at most STARTS_PER_IP_PER_HOUR stages
 """
 
 import os
 import re
 import secrets
+import time
+from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response, StreamingResponse
 from starlette.background import BackgroundTask
 
 from .sandboxes import DEMO_PORT, TEMPORAL_UI_PORT, SandboxManager, Settings
@@ -31,6 +39,13 @@ DROP_RESPONSE = {"connection", "keep-alive", "transfer-encoding", "set-cookie", 
                  "content-security-policy"}
 UNREACHABLE = {502, 503, 504}
 CSP_META = re.compile(r"<meta[^>]*http-equiv=[\"']?content-security-policy[\"']?[^>]*>", re.I)
+# Sent only by the waiting page's script: a link, a form or a crawler's request doesn't carry it.
+START_HEADER = "x-stage-start"
+BOTS = re.compile(r"bot|crawl|spider|slurp|scrape|fetch|preview|monitor|headless|phantom|lighthouse|python|curl|wget|"
+                  r"httpx|axios|node-fetch|go-http|java/|okhttp|libwww|facebookexternalhit|embedly|whatsapp|"
+                  r"telegram|discord|slack|linkedin|skype", re.I)
+STARTS_PER_IP_PER_HOUR = int(os.environ.get("STARTS_PER_IP_PER_HOUR", 10))
+starts_by_ip: dict[str, deque[float]] = defaultdict(deque)
 
 settings = Settings(
     snapshot=os.environ.get("SNAPSHOT") or Settings().snapshot,
@@ -97,9 +112,36 @@ async def proxy(request: Request, visitor: str, port: int, path: str) -> Respons
                              background=BackgroundTask(upstream.aclose))
 
 
+def is_bot(request: Request) -> bool:
+    agent = request.headers.get("user-agent", "")
+    return not agent or bool(BOTS.search(agent))
+
+
+def client_ip(request: Request) -> str:
+    # Fly puts the visitor's address in Fly-Client-IP; behind any other proxy, the peer's.
+    return request.headers.get("fly-client-ip") or (request.client.host if request.client else "unknown")
+
+
+def may_start(request: Request, visitor: str, new: bool) -> str | None:
+    """Why this request may not start a stage, or None if it may."""
+    if new or request.headers.get(START_HEADER) != "1":
+        return "Open the demo page in a browser to start your stage."
+    if is_bot(request):
+        return "This page starts a live demo for a person in a browser, not for bots."
+    if manager.status(visitor).state != "none":
+        return None  # already starting, or a stopped stage to wake: not a new one
+    recent = starts_by_ip[client_ip(request)]
+    while recent and recent[0] < time.time() - 3600:
+        recent.popleft()
+    if len(recent) >= STARTS_PER_IP_PER_HOUR:
+        return "Too many stages started from your network in the last hour. Try again later, or run it locally (make demo)."
+    recent.append(time.time())
+    return None
+
+
 def not_ready(request: Request, visitor: str, new: bool) -> Response:
-    """The demo's paths while the stage isn't ready: the waiting page, or a 503 its poll understands."""
-    manager.ensure(visitor)
+    """The demo's paths while the stage isn't ready: the waiting page (which asks for the stage),
+    or a 503 its poll understands. Neither starts anything."""
     wants_page = request.method == "GET" and "text/html" in request.headers.get("accept", "")
     if wants_page:
         return remember(HTMLResponse(WAITING, headers={"cache-control": "no-store"}), request, visitor, new)
@@ -121,8 +163,16 @@ async def stage_status(request: Request):
 @app.post("/_stage/start")
 async def stage_start(request: Request):
     visitor, new = visitor_of(request)
+    refused = may_start(request, visitor, new)
+    if refused:
+        return remember(JSONResponse({"state": "refused", "message": refused}, status_code=403), request, visitor, new)
     progress = manager.ensure(visitor)
     return remember(JSONResponse({"state": progress.state, "message": progress.message}), request, visitor, new)
+
+
+@app.get("/robots.txt")
+async def robots():
+    return PlainTextResponse("User-agent: *\nDisallow: /_stage/\n")
 
 
 @app.get("/_stage/health")

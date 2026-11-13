@@ -53,14 +53,15 @@ let timer = 0;
 
 async function call(method, path) {
   try {
-    const res = await fetch(path, { method, headers: { accept: "application/json" }, credentials: "same-origin" });
+    // x-stage-start: only this script asks for a stage (the front door turns away anything else).
+    const res = await fetch(path, { method, headers: { accept: "application/json", "x-stage-start": "1" }, credentials: "same-origin" });
     return await res.json();
   } catch { return { state: "finding", message: "Reaching the front door…" }; }
 }
 
 function show(s) {
   message.textContent = s.message || "Starting your stage…";
-  const bad = s.state === "error" || s.state === "full";
+  const bad = s.state === "error" || s.state === "full" || s.state === "refused";
   status.classList.toggle("bad", bad);
   retry.hidden = !bad;
   if (!bad) elapsed.textContent = `${Math.round((Date.now() - t0) / 1000)}s`;
@@ -72,7 +73,7 @@ async function poll() {
   if (s.state === "ready") { location.reload(); return; }
   if (s.state === "none") { show(await call("POST", "/_stage/start")); }
   else show(s);
-  if (s.state !== "error" && s.state !== "full") timer = setTimeout(poll, 1000);
+  if (s.state !== "error" && s.state !== "full" && s.state !== "refused") timer = setTimeout(poll, 1000);
 }
 
 retry.addEventListener("click", async () => {
@@ -80,7 +81,7 @@ retry.addEventListener("click", async () => {
   show(await call("POST", "/_stage/start"));
   timer = setTimeout(poll, 1000);
 });
-call("POST", "/_stage/start").then((s) => { show(s); timer = setTimeout(poll, 1000); });
+call("POST", "/_stage/start").then((s) => { show(s); if (s.state !== "refused") timer = setTimeout(poll, 1000); });
 </script>
 </body>
 </html>

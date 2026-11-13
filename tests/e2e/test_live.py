@@ -16,6 +16,8 @@ from player import next_step, open_scenario, play_to_the_end, state
 
 BASE = (os.environ.get("E2E_BASE_URL") or "").rstrip("/")
 RUN = os.environ.get("GITHUB_RUN_ID") or str(int(time.time()))
+BROWSER = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) "
+           "Chrome/131.0.0.0 Safari/537.36")
 pytestmark = pytest.mark.skipif(not BASE, reason="E2E_BASE_URL is not set: no deployed demo to test")
 
 
@@ -41,7 +43,8 @@ def _delete_sandboxes(ids: list[str]) -> None:
 def visit(browser, visitors, name: str, page_errors):
     visitor = f"e2e-{RUN}-{name}"
     visitors.append(visitor)
-    context = browser.new_context(viewport={"width": 1490, "height": 811}, color_scheme="dark")
+    # A desktop Chrome's user agent: the front door turns away headless browsers, as it does bots.
+    context = browser.new_context(viewport={"width": 1490, "height": 811}, color_scheme="dark", user_agent=BROWSER)
     context.add_cookies([{"name": "stage", "value": visitor, "url": BASE}])
     page = context.new_page()
     page.on("pageerror", lambda err: page_errors.append(str(err)))

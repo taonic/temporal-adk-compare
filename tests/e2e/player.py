@@ -17,7 +17,10 @@ def open_scenario(page, index: int) -> None:
 def finish_typing(page) -> None:
     bubble = page.locator("#player .guide-bubble.is-streaming")
     if bubble.count():
-        bubble.first.click()
+        # A click on the bubble itself, not at a point in it: the middle of a caption can be a code
+        # link, which would open the code dialog over the player; and a bubble still typing isn't
+        # stable enough for a click at a position.
+        bubble.first.dispatch_event("click")
 
 
 def next_step(page, timeout: float = 120_000) -> None:

@@ -10,9 +10,10 @@ demo:
 test:
 	uv run pytest tests/test_units.py tests/test_acts.py
 
-# Only the tests that need no processes.
+# Only the tests that need no processes (the front door's with a stand-in for Daytona).
 test-fast:
 	uv run pytest tests/test_units.py
+	uv run --group frontdoor pytest tests/test_frontdoor.py
 
 # The page in a browser: every scenario played through the player (about three minutes).
 # Once: uv run --group e2e playwright install chromium. E2E_BROWSER_CHANNEL=chrome uses Chrome.
