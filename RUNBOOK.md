@@ -53,7 +53,7 @@ Don't linger on the Temporal outage step: its outage lasts 30s, and once it ends
 
 | Step | Point at | Say |
 |---|---|---|
-| A crash right after the side effect | ⚡ *crash point* just below both `refund_payment` nodes | No idempotency key yet. |
+| A crash right after the side effect | ⚡ *crash point* beside both `refund_payment` nodes, which are dashed orange | No idempotency key yet. |
 | ADK: host A dies after the refund | `refund_payment`: *money moved, result NOT recorded*; chip *unfinished · nobody working on it* | Host A came back idle, as in Scenario 1. |
 | Resume ADK | Ledger: **ADK refunded $1,000.00** | Quote the ADK docstring in the caption. This is documented behaviour, not a bug. |
 | Temporal: Worker A dies after the refund | `refund_payment`: *recorded*; Temporal *completed*, one refund | Click the Temporal node's **What's persisted** to show `ActivityTaskCompleted`. The Worker found its work on the task queue. |

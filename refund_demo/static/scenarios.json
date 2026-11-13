@@ -72,7 +72,7 @@
         {
           "title": "Run the recovery scan you wrote",
           "side": "adk",
-          "caption": "Your turn: click <span class=\"do\">Run recovery scan + resume</span> in the ADK column. <a href=\"#adk/recovery\" data-code=\"adk/recovery\"><code>recovery.py</code></a> resumes the invocation on host B, and the refund isn't repeated.<br><br><mark class=\"weak\">Now you own when the scan runs, dead vs slow (<a class=\"ext\" href=\"https://github.com/google/adk-python/blob/v2.13.0/src/google/adk/errors/_stale_session_error.py\" target=\"_blank\" rel=\"noopener\"><code>StaleSessionError</code></a>), a lease, and code changed since the crash.</mark><span class=\"code-links\">ADK docs: <a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Event%20logging%20includes%20results%20from%20Tools%20which%20successfully%20returned%20a%20result\" target=\"_blank\" rel=\"noopener\">resume ↗</a><a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Do%20not%20modify%20a%20stopped%20agent%20workflow%20before%20resuming%20it\" target=\"_blank\" rel=\"noopener\">stopped workflows ↗</a></span>",
+          "caption": "Your turn. Read <a href=\"#adk/recovery\" data-code=\"adk/recovery\"><code>recovery.py</code></a> first, then click <span class=\"do\">Run recovery scan + resume</span>: it resumes the invocation on host B, and the refund isn't repeated.<br><br><mark class=\"weak\">Still yours to build: when the scan runs, telling a dead invocation from a slow one (resume a live one and you get <a class=\"ext\" href=\"https://github.com/google/adk-python/blob/v2.13.0/src/google/adk/errors/_stale_session_error.py\" target=\"_blank\" rel=\"noopener\"><code>StaleSessionError</code></a>), a lease so only one host resumes it, and what to do when the code changed since the crash.</mark><span class=\"code-links\">ADK docs: <a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Event%20logging%20includes%20results%20from%20Tools%20which%20successfully%20returned%20a%20result\" target=\"_blank\" rel=\"noopener\">resume ↗</a><a class=\"doc\" href=\"https://adk.dev/runtime/resume/#:~:text=Do%20not%20modify%20a%20stopped%20agent%20workflow%20before%20resuming%20it\" target=\"_blank\" rel=\"noopener\">stopped workflows ↗</a></span>",
           "actions": [],
           "waitFor": [
             "adk_recovered"
@@ -137,7 +137,7 @@
         },
         "temporal_source": {
           "label": "Temporal docs: Retry Policies",
-          "href": "https://docs.temporal.io/encyclopedia/retry-policies#:~:text=A%20Retry%20Policy%20is%20a%20collection%20of%20settings"
+          "href": "https://docs.temporal.io/encyclopedia/retry-policies#:~:text=Temporal%27s%20default%20behavior%20is%20to%20automatically%20retry%20an%20Activity%20that%20fails%2C%20so%20transient%20or%20intermittent%20failures%20require%20no%20action%20on%20your%20part."
         }
       },
       "steps": [
@@ -243,7 +243,7 @@
         {
           "title": "Kill Worker A mid-retry",
           "side": "temporal",
-          "caption": "<code>kill -9</code> on Worker A while it backs off; the supervisor restarts it.<br><br>The next attempt was already scheduled on the Temporal Server, so <mark class=\"strong\">Temporal finishes by itself</mark>: the attempt numbers carry on from before the crash, and no recovery code ran.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/encyclopedia/retry-policies#:~:text=A%20Retry%20Policy%20is%20a%20collection%20of%20settings\" target=\"_blank\" rel=\"noopener\">Temporal docs: Retry Policies ↗</a></span>",
+          "caption": "<code>kill -9</code> on Worker A while it backs off; the supervisor restarts it.<br><br>The next attempt was already scheduled on the Temporal Server, so <mark class=\"strong\">Temporal finishes by itself</mark>: the attempt numbers carry on from before the crash, and no recovery code ran.<span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/encyclopedia/retry-policies#:~:text=Temporal%27s%20default%20behavior%20is%20to%20automatically%20retry%20an%20Activity%20that%20fails%2C%20so%20transient%20or%20intermittent%20failures%20require%20no%20action%20on%20your%20part.\" target=\"_blank\" rel=\"noopener\">Temporal docs: Retry Policies ↗</a></span>",
           "actions": [
             {
               "post": "/api/processes/worker-a/kill"
@@ -322,7 +322,7 @@
         {
           "title": "Resume the ADK invocation",
           "side": "adk",
-          "caption": "Click <span class=\"do\">Run recovery scan + resume</span> in the ADK column. ADK finds a call with no response (<i>“Dropping function calls with no matching function response”</i> in the log) and <mark class=\"weak\">runs <a href=\"#adk/refund_payment\" data-code=\"adk/refund_payment\"><code>refund_payment</code></a> again</mark>: $500 refunded twice.<span class=\"code-links\">Read the code: <a href=\"#adk/runtime\" data-code=\"adk/runtime\">how ADK resumes</a></span><br>Documented, not a bug: <i>“we only guarantee an at-least-once behavior once resumed.”</i>",
+          "caption": "Read <a href=\"#adk/recovery\" data-code=\"adk/recovery\">the recovery code</a> first, then click <span class=\"do\">Run recovery scan + resume</span>. ADK finds a call with no response (<i>“Dropping function calls with no matching function response”</i> in the log) and <mark class=\"weak\">runs <a href=\"#adk/refund_payment\" data-code=\"adk/refund_payment\"><code>refund_payment</code></a> again</mark>: $500 refunded twice.<span class=\"code-links\">Read the code: <a href=\"#adk/runtime\" data-code=\"adk/runtime\">how ADK resumes</a></span>",
           "actions": [],
           "waitFor": [
             "adk_recovered"

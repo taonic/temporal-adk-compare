@@ -120,12 +120,19 @@ def test_code_in_a_caption_opens_that_code(page):
     assert all("retry_options=MODEL_RETRY" in line for line in page.locator("dialog pre.code .cl.hl").all_inner_texts())
 
 
+HEADROOM = 8
+
+
 def test_every_dialog_fits_the_pane(page):
     """Every scenario's intro and every step's message fit the docked pane at 1490x811, without scrolling.
 
-    Each message is rendered in place (no actions run) and typed out at once; the pane's thread must
-    not overflow. A caption that does needs shortening, not a scrollbar."""
-    overflowing = page.evaluate("""async () => {
+    Each message is rendered in place (no actions run) and typed out at once, in Inter (which ships
+    with the page, so this holds on every machine); the pane's thread must keep HEADROOM px to spare,
+    for code chips, whose monospace font differs by system. A caption that doesn't fit needs
+    shortening, not a scrollbar."""
+    overflowing = page.evaluate("""async (headroom) => {
+      await document.fonts.ready;
+      if (!document.fonts.check('14px Inter')) return ['Inter did not load'];
       const out = [];
       for (let a = 0; a < scenarios.length; a++) {
         for (let s = -1; s < scenarios[a].steps.length; s++) {
@@ -133,9 +140,12 @@ def test_every_dialog_fits_the_pane(page):
           await new Promise((r) => setTimeout(r, 30)); finishTyping(); renderPlayer();
           if (document.body.classList.contains('content-only')) continue;  // the wrap-up scrolls the page
           const thread = document.querySelector('#player .thread');
-          const over = thread.scrollHeight - thread.clientHeight;
+          // Where the content ends (the thread is positioned, so offsetTop is within it), plus its padding.
+          const end = Math.max(...[...thread.children].map((c) => c.offsetTop + c.offsetHeight))
+                      + parseFloat(getComputedStyle(thread).paddingBottom);
+          const over = Math.ceil(end + headroom - thread.clientHeight);
           if (over > 0) out.push(`${scenarios[a].short} ${s < 0 ? 'intro' : 'step ' + (s + 1)}: ${over}px too tall`);
         }
       }
-      return out; }""")
+      return out; }""", HEADROOM)
     assert not overflowing, overflowing

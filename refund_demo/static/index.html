@@ -37,6 +37,10 @@
     --t-kw: #d38bd2; --t-str: #34d399; --t-num: #fbbf24; --t-com: #6b7382; --t-def: #818cf8; --t-deco: #fbbf24; --t-bi: #66d9e8;
   }
   * { box-sizing: border-box; }
+  /* Inter ships with the page (SIL OFL, fonts/LICENSE-Inter.txt): every machine sets the same text, so a dialog
+     that fits the pane in the tests fits it for every visitor. */
+  @font-face { font-family: "Inter"; font-style: normal; font-weight: 100 900; font-display: swap;
+               src: url("/static/fonts/inter-latin-wght-normal.woff2") format("woff2"); }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
   code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   a { color: var(--accent); }
@@ -361,10 +365,15 @@
   .flow .node.limbo rect.box { fill: var(--warn-bg); stroke: var(--warn); stroke-dasharray: 5 3; stroke-width: 2; }
   .flow .node.dup rect.box { fill: var(--bad-bg); stroke: var(--bad); stroke-width: 2.2; }
   .flow .node.waiting rect.box { fill: var(--warn-bg); stroke: var(--warn); }
-  .flow .node.stalled rect.box { fill: var(--idle-bg); stroke: var(--bad); stroke-dasharray: 4 3; }
+  .flow .node.stalled rect.box { fill: var(--idle-bg); }
   .flow .node.skipped rect.box { fill: var(--idle-bg); stroke-dasharray: 3 3; }
   .flow .node.off { opacity: .35; }
   .flow .node.focus rect.box { stroke: var(--accent); stroke-width: 2.4; }
+  /* A step a crash interrupted keeps its own border, focused or not: dashed orange where the process died. */
+  .flow .node.stalled rect.box, .flow .node.stalled.focus rect.box,
+  .flow .node.armed rect.box, .flow .node.armed.focus rect.box { stroke: var(--bad); stroke-dasharray: 5 3; stroke-width: 2.2; }
+  .flow .node.limbo.focus rect.box { stroke: var(--warn); stroke-dasharray: 5 3; }
+  .flow .node.dup.focus rect.box { stroke: var(--bad); }
   .flow .edge { stroke: var(--border); stroke-width: 2; fill: none; }
   .flow .edge.lit { stroke: var(--ok); }
   .flow .badge rect { fill: var(--idle-bg); stroke: var(--border); }
@@ -377,7 +386,7 @@
   .flow .badge.outage rect { fill: var(--warn-bg); stroke: var(--warn); } .flow .badge.outage text { fill: var(--warn); font-weight: 700; }
   .flow .badge.overdue rect { fill: var(--bad-bg); stroke: var(--bad); } .flow .badge.overdue text { fill: var(--bad); font-weight: 700; }
   .flow .bolt text { font: 700 11px system-ui, sans-serif; fill: var(--bad); }
-  .flow .bolt rect { fill: var(--bad-bg); stroke: var(--bad); stroke-dasharray: 3 2; }
+  .flow .bolt rect { fill: none; stroke: none; }  /* the crash point is its orange text alone */
   @keyframes pulse { 50% { stroke-width: 2.6; } }
   @media (prefers-reduced-motion: reduce) { .flow .node.active rect.box { animation: none; } }
   .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); padding: 0 4px; margin-top: -4px; }
@@ -394,9 +403,10 @@
   /* A weakness of the runtime: amber always, red while it is actually hurting (work stranded). */
   .panel.weak { border-color: color-mix(in srgb, var(--warn) 60%, var(--border)); background: color-mix(in srgb, var(--warn-bg) 45%, var(--panel)); }
   .panel.weak .big { color: var(--warn); }
-  .panel.weak.hurting { border-color: var(--bad); background: color-mix(in srgb, var(--bad-bg) 70%, var(--panel)); }
-  .panel.weak.hurting .big, .panel.weak.hurting .line.strong { color: var(--bad); }
-  .panel.weak.hurting .line.strong { font-weight: 600; }
+  /* Hurting: the pulsing button carries the alarm; the box itself stays quiet (a tinted border, plain text). */
+  .panel.weak.hurting { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); background: var(--panel); }
+  .panel.weak.hurting .big { color: var(--text); }
+  .panel.weak.hurting .line.strong { color: var(--muted); }
   .panel.weak .line.twice { color: var(--bad); }
   .panel .big { font-weight: 700; font-size: 13.5px; }
   .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; align-items: baseline; }
@@ -1203,6 +1213,9 @@ function renderProcs(side) {
 }
 
 // Compact, so a column's flow and its panels fit one screen.
+// The step each crash point kills: dashed orange while it is armed, before the crash.
+const CRASHES_IN = { before_notify: "notify_customer", refund_charged: "refund_payment", refund_returned: "refund_payment",
+                     batch_partial: "refund_payment" };
 const NODE_X = 14, NODE_W = 370, NODE_H = 40, GAP = 12, TOP = 6, BOLT_W = 98;
 // The steps drawn: "manager approval" only where it's in play (Scenario 4, or a run with the policy).
 function flowNodes() {
@@ -1228,7 +1241,7 @@ function renderFlow(side) {
   NODES.forEach((n, i) => {
     const y = TOP + i * (NODE_H + GAP);
     const st = ns[n.id] || {};
-    const g = s("g", { class: `node ${st.cls || ""} ${focus.includes(n.id) ? "focus" : ""}`, tabindex: "0", role: "button",
+    const g = s("g", { class: `node ${st.cls || ""} ${focus.includes(n.id) ? "focus" : ""} ${CRASHES_IN[armed] === n.id ? "armed" : ""}`, tabindex: "0", role: "button",
                        "aria-label": `${n.label}: ${st.sub || ""}. Show code`,
                        onclick: () => openNode(side, n.id), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNode(side, n.id); } } });
     g.append(s("rect", { class: "box", x: NODE_X, y, width: NODE_W, height: NODE_H, rx: 8 }));
@@ -1262,13 +1275,13 @@ function renderFlow(side) {
     }
     svg.append(g);
     // Crash markers
-    // "crash point" beside where the process will die; the marker's height says where, its tooltip in words.
+    // "crash point" level with the step it kills (dashed orange); its tooltip says exactly where in words.
     const bolt = (yy, where) => svg.append(s("g", { class: "bolt" }, s("title", {}, `Crash point: the process dies ${where}`),
       s("rect", { x: NODE_X + NODE_W + 6, y: yy - 9, width: BOLT_W, height: 18, rx: 4 }),
       s("text", { x: NODE_X + NODE_W + 12, y: yy + 4 }, "⚡ crash point")));
     if (armed === "refund_charged" && n.id === "refund_payment") bolt(y + NODE_H / 2, "inside refund_payment, after the money moves");
-    if (armed === "refund_returned" && n.id === "refund_payment") bolt(y + NODE_H + GAP / 2, "after refund_payment returns");
-    if (armed === "before_notify" && n.id === "notify_customer") bolt(y - GAP / 2, "before notify_customer");
+    if (armed === "refund_returned" && n.id === "refund_payment") bolt(y + NODE_H / 2, "after refund_payment returns");
+    if (armed === "before_notify" && n.id === "notify_customer") bolt(y + NODE_H / 2, "before notify_customer");
     if (armed === "batch_partial" && n.id === "refund_payment") bolt(y + NODE_H / 2, "partway through a batch of refunds");
   });
   return svg;
