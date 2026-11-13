@@ -1,6 +1,6 @@
 """Runs a private copy of the whole demo stack, on its own ports, for the act tests.
 
-Needs a Temporal Service on localhost:7233 (`temporal server start-dev`); the
+Needs a Temporal Server on localhost:7233 (`temporal server start-dev`); the
 API starts one itself if none is running.
 """
 

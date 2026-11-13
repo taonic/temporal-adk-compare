@@ -143,19 +143,31 @@
   .guide-bubble { flex: 1 1 auto; min-width: 0; padding: 12px 16px 14px; border: 1px solid var(--border); border-radius: 4px 14px 14px 14px;
                   background: var(--panel); line-height: 1.6; }
   .guide-bubble.is-streaming { cursor: pointer; }
-  .guide-kicker { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .guide-kicker { margin: 0; color: var(--accent); font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
   .guide-msg.adk .guide-kicker { color: var(--adk); } .guide-msg.temporal .guide-kicker { color: var(--tmp); }
-  .guide-title { margin: 2px 0 8px; font-size: 16px; line-height: 1.25; }
-  .caption { font-size: 13.5px; }
+  .guide-kicker .scenario-name { display: block; margin-bottom: 2px; color: var(--muted); text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 700; }
+  .guide-title { margin: 2px 0 8px; font-size: 18px; line-height: 1.25; }
+  .caption { font-size: 15px; }
   .caption code { background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
-  .caption .proves { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  /* The one kind of emphasis in a caption: a highlighter stroke, swept in like the claims'. Green for what a
+     runtime does for you, yellow for a caution: what plain ADK leaves to you. No bold. */
+  .caption mark { color: inherit; font-weight: inherit; padding: 1px 3px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone;
+                  background: linear-gradient(color-mix(in srgb, var(--v) 28%, transparent), color-mix(in srgb, var(--v) 28%, transparent))
+                              no-repeat 0 0 / 0% 100%;
+                  animation: mark-sweep .9s cubic-bezier(.3, .7, .3, 1) .1s forwards; }
+  .caption mark.weak { --v: var(--warn); } .caption mark.strong { --v: var(--ok); }
+  .caption a.ext { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 45%, transparent); text-underline-offset: 2px; }
+  .caption a.ext:hover { text-decoration-color: currentColor; }
+  .caption .proves { margin-top: 8px; font-size: 13px; color: var(--muted); }
   /* "Read the code" links in a caption: the code itself opens in the dialog. */
   /* In a sentence: an ordinary link. */
   .caption a[data-code] { color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline;
                           text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 3px; }
   .caption a[data-code]:hover { text-decoration-color: var(--accent); }
+  /* Code in a sentence that opens the code: the link's color and underline on the code chip. */
+  .caption a[data-code] code { color: inherit; font-weight: 500; }
   /* "Read the code:" under a paragraph: small pills, each opening the code. */
-  .caption .code-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .caption .code-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--muted); }
   .caption .code-links a { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border: 1px solid var(--border-strong);
                                       border-radius: 999px; background: var(--panel); text-decoration: none; white-space: nowrap; }
   .caption .code-links a[data-code]::after { content: "›"; font-weight: 700; }
@@ -195,9 +207,15 @@
   .pins .thesis-line:not(.on) mark { animation: none; background-size: 100% 100%; }
   .pins .toggle-full { justify-self: end; font-size: 11px; color: var(--muted); }
   .pins:hover .toggle-full { color: var(--accent); }
-  .waiting { display: flex; align-items: center; gap: 8px; padding-left: 38px; font-size: 12px; color: var(--warn); }
+  .waiting { display: flex; align-items: center; gap: 8px; padding-left: 38px; font-size: 13px; color: var(--warn); }
   .waiting::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: wait-pulse 1.2s ease-in-out infinite; }
   @keyframes wait-pulse { 50% { opacity: .25; } }
+  /* A timed wait (the model outage, the approval deadline), counting down: the number large, a bar draining to zero. */
+  .waiting .count { display: grid; gap: 4px; flex: 1; font-size: 14px; }
+  .waiting .count b { font-size: 18px; font-variant-numeric: tabular-nums; }
+  .waiting .count i { display: block; height: 4px; border-radius: 2px; background: var(--warn-bg); overflow: hidden; }
+  .waiting .count i::before { content: ""; display: block; height: 100%; width: var(--left, 100%); background: currentColor;
+                               transition: width .7s linear; }
   /* Quick replies: under the message, Back alone on the left, the primary one rightmost. */
   .replies { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding-left: 38px;
              animation: guide-in 220ms ease-out; }
@@ -205,6 +223,7 @@
   .reply { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 5px 13px; border: 1px solid var(--border-strong);
            border-radius: 999px; background: var(--panel); color: var(--text); font-size: 12.5px; font-weight: 750; line-height: 1.25; }
   .reply:hover { border-color: var(--accent); color: var(--accent); }
+  a.reply { text-decoration: none; }
   .reply.is-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
   .reply.is-primary:hover { border-color: var(--accent-strong); background: var(--accent-strong); color: #fff; }
   /* Waiting for the step's outcome: plainly not for pressing. */
@@ -220,7 +239,7 @@
   @keyframes caret-blink { 50% { opacity: 0; } }
   @media (prefers-reduced-motion: reduce) {
     .stream-caret, .waiting::before, .guide-msg, .replies { animation: none; }
-    .thesis mark, .pins mark { animation: none; background-size: 100% 100%; }
+    .thesis mark, .pins mark, .caption mark { animation: none; background-size: 100% 100%; }
   }
 
   .caption table.wrap-table { margin: 10px 0 4px; font-size: 13.5px; border-collapse: separate; border-spacing: 0 4px; }
@@ -236,7 +255,8 @@
   .wrap-table th.where-h { color: var(--muted); font-size: 11.5px; font-weight: 600; }
   .wrap-table.usecases { max-width: 820px; }
   .wrap-table.usecases th { white-space: normal !important; width: 55% !important; font-weight: 500; }
-  .caption pre.arch { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; margin: 10px 0; font-size: 12.5px; line-height: 1.5; }
+  /* The recommended architecture (doc/recommended.archify.json, rendered by archify), in the theme's colors. */
+  .caption picture.arch img { display: block; width: 100%; max-width: 1000px; height: auto; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; }
   .caption .wrap-list { margin: 10px 0 0; padding-left: 22px; display: grid; gap: 8px; }
   .caption .wrap-list span { margin-left: 6px; font-size: 11.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
   .caption .wrap-close { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--info-bg); }
@@ -275,16 +295,17 @@
   .side-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: start; }
   .side-head h2 { color: var(--c); }
   .side-head .stack { font-size: 11.5px; color: var(--muted); }
-  .side-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; justify-content: space-between; }
+  .side-bar { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; justify-content: space-between; }
   .procs { display: flex; flex-wrap: wrap; gap: 6px; }
-  .crash { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-  .crash.armed select { border-color: var(--bad); color: var(--bad); font-weight: 600; }
   .proc { display: inline-flex; align-items: center; gap: 6px; padding: 3px 4px 3px 9px; border-radius: 8px;
           border: 1px solid var(--border); font-size: 12px; }
   .proc .state { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); }
   .proc.running .state { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
-  .proc.crashed .state, .proc.restarting .state { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-bg); }
-  .proc.crashed { border-color: var(--bad); }
+  .proc.restarting .state { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-bg); }
+  /* Down, not alarming: a hollow dot, a dashed outline and a dimmed name. The flow carries the story. */
+  .proc.crashed { border-style: dashed; border-color: var(--border-strong); }
+  .proc.crashed .state { background: transparent; box-shadow: inset 0 0 0 1.5px var(--faint); }
+  .proc.crashed b { color: var(--muted); font-weight: 600; }
   /* The body is a size container, not the column: containment on the column would cancel its subgrid. */
   .side-body { container: sidebody / inline-size; min-width: 0; }
   .side-body > .body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
@@ -292,7 +313,9 @@
      readable, and the panels sit two-up underneath it. */
   @container sidebody (max-width: 590px) {
     .side-body > .body { grid-template-columns: minmax(0, 1fr); }
-    .side-body .flow { max-width: 470px; }
+    /* As wide as the window's height allows with the panels still on screen: --k is the flow's
+       width per pixel of height, set from how many steps it draws (renderSide). */
+    .side-body .flow { max-width: clamp(300px, calc((100vh - 510px) * var(--k, 1.45)), 470px); }
     .side-body .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   }
   @container sidebody (max-width: 400px) { .side-body .panels { grid-template-columns: minmax(0, 1fr); } }
@@ -305,6 +328,7 @@
   .flow .node:hover rect.box, .flow .node:focus-visible rect.box { stroke: var(--accent); stroke-width: 2; }
   .flow .node text { fill: var(--text); font: 600 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
   .flow .node text.sub { fill: var(--muted); font: 400 11px system-ui, sans-serif; }
+  .flow .node text.by { fill: var(--faint); font: 400 10px system-ui, sans-serif; }
   .flow .node.done rect.box { fill: var(--ok-bg); stroke: var(--ok); }
   .flow .node.active rect.box { fill: var(--info-bg); stroke: var(--info); animation: pulse 1.1s ease-in-out infinite; }
   .flow .node.limbo rect.box { fill: var(--warn-bg); stroke: var(--warn); stroke-dasharray: 5 3; stroke-width: 2; }
@@ -323,6 +347,8 @@
   .flow .badge.rec rect { fill: var(--ok-bg); stroke: var(--ok); } .flow .badge.rec text { fill: var(--ok); }
   .flow .badge.norec rect { fill: var(--warn-bg); stroke: var(--warn); } .flow .badge.norec text { fill: var(--warn); }
   .flow .badge.attempt rect { fill: var(--info-bg); stroke: var(--info); } .flow .badge.attempt text { fill: var(--info); }
+  .flow .badge.outage rect { fill: var(--warn-bg); stroke: var(--warn); } .flow .badge.outage text { fill: var(--warn); font-weight: 700; }
+  .flow .badge.overdue rect { fill: var(--bad-bg); stroke: var(--bad); } .flow .badge.overdue text { fill: var(--bad); font-weight: 700; }
   .flow .bolt text { font: 700 11px system-ui, sans-serif; fill: var(--bad); }
   .flow .bolt rect { fill: var(--bad-bg); stroke: var(--bad); stroke-dasharray: 3 2; }
   @keyframes pulse { 50% { stroke-width: 2.6; } }
@@ -349,7 +375,7 @@
   .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; align-items: baseline; }
   .panel-head .muted { font-size: 11px; white-space: nowrap; }
   .panel .line { font-size: 12px; margin-top: 4px; }
-  .records { max-height: 260px; overflow: auto; font-size: 11.5px; margin-top: 2px; }
+  .records { max-height: 170px; overflow: auto; font-size: 11.5px; margin-top: 2px; }
   .rec { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 4px; padding: 2px 0; border-bottom: 1px dashed var(--border); }
   .rec .n { color: var(--muted); text-align: right; }
   .rec .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -555,6 +581,10 @@ function adkPicture() {
     started: (name) => calls(name).length > 0,
     recorded: (name) => new Set(responses(name).map((r) => r.call_id)).size,
     rejected: (name) => responses(name).some((r) => r.data && r.data.error),
+    // Which host appended the step's result (each host stamps its events).
+    by: (name) => whoDid(ev.filter((e) => name === "decide" ? e === ev.find((x) => (x.calls || []).length || x.kind === "final_text")
+      : name === "done" ? adk.status === "completed" && e === ev[ev.length - 1]
+      : (e.responses || []).some((r) => r.name === name && !placeholder(r))).map((e) => e.host)),
     attempts: () => 0,
     // In-process retries leave no event; the API reads them from the live host's log.
     modelRetry: adk.retrying || null,
@@ -578,6 +608,10 @@ function temporalPicture() {
     started: (name) => of("ActivityTaskScheduled", name).length > 0,
     recorded: (name) => of("ActivityTaskCompleted", name).length,
     rejected: () => false,
+    // Which Worker reported the Activity's result; for the run's end, the Worker that completed it.
+    by: (name) => whoDid(name === "decide" ? of("ActivityTaskCompleted", "invoke_model").slice(0, 1).map((e) => e.by)
+      : name === "done" ? (t.status === "COMPLETED" ? hist.filter((e) => e.type === "WorkflowTaskStarted").slice(-1).map((e) => e.identity) : [])
+      : of("ActivityTaskCompleted", name).map((e) => e.by)),
     // A retrying Activity's attempt count lives on the pending Activity until it completes.
     attempts: (name) => Math.max(0, ...of("ActivityTaskStarted", name).map((e) => e.attempt || 1),
                                  ...pending.filter((a) => a.activity === name).map((a) => a.attempt)),
@@ -590,6 +624,12 @@ function temporalPicture() {
     done: t.status === "COMPLETED",
     records: hist,
   };
+}
+
+// "worker-b" → "Worker B", "host-a" → "Host A", in order of first appearance.
+function whoDid(ids) {
+  const names = ids.filter(Boolean).map((id) => id.replace(/^.*?\b(worker|host)-(\w).*$/, (_, k, n) => `${k[0].toUpperCase()}${k.slice(1)} ${n.toUpperCase()}`));
+  return [...new Set(names)];
 }
 
 function picture(side) { return side === "adk" ? adkPicture() : temporalPicture(); }
@@ -646,6 +686,7 @@ function nodeStates(side) {
     out[name] = st;
   }
   out.done = p.done ? { cls: "done", sub: "completed" } : { cls: "", sub: run ? statusText(side, p) : "" };
+  if (run) for (const id of ["decide", "refund_payment", "record_refund", "notify_customer", "done"]) out[id].by = p.by(id);
   return out;
 }
 
@@ -714,6 +755,7 @@ const PREDICATES = {
   deadline_passed: (st) => adkFinished(st) || (st.adk && st.adk.awaiting && st.now > st.adk.awaiting.deadline_at + 1),
   temporal_timer_fired: (st) => temporalFinished(st) || Boolean(st.temporal && (st.temporal.history || []).some((e) => e.type === "TimerFired")),
   adk_stopped: (st) => adkFinished(st) || (st.adk && st.adk.status === "unfinished" && !adkHostBusy()),
+  worker_a_down: (st) => temporalFinished(st) || st.processes.some((p) => p.key === "worker-a" && p.state !== "running"),
   outage_over: (st) => !st.model_outage_left,
   adk_retrying: (st) => adkFinished(st) || Boolean(st.adk && st.adk.retrying && st.adk.retrying.attempt >= 2),
   temporal_retrying: (st) => temporalFinished(st)
@@ -726,7 +768,7 @@ const PREDICATE_TEXT = {
   temporal_done: "Temporal finishing", adk_done: "ADK finishing", adk_unfinished: "ADK host A to crash and restart",
   adk_awaiting: "ADK to wait for a manager", temporal_awaiting: "Temporal to wait for a manager",
   deadline_passed: "the approval deadline to pass", temporal_timer_fired: "the deadline to pass and the timer to fire",
-  adk_stopped: "the ADK invocation to stop", outage_over: "the model outage to end",
+  adk_stopped: "the ADK invocation to stop", worker_a_down: "Worker A to crash", outage_over: "the model outage to end",
   adk_retrying: "ADK to retry the model", temporal_retrying: "Temporal to retry the model",
 };
 function pendingWaits() {
@@ -889,7 +931,9 @@ function message(act) {
   return h("article", { class: `guide-msg ${step.side || ""}` },
     h("span", { class: "guide-avatar", "aria-hidden": "true" }, "✦"),
     h("div", { class: "guide-bubble" },
-      h("p", { class: "guide-kicker" }, step.side ? `${sideLabel(step.side)} · ${where}` : `${act.short} · ${where}`),
+      // The scenario's name on every step, not only its intro; under it, whose step and how far in.
+      h("p", { class: "guide-kicker" }, h("span", { class: "scenario-name" }, act.title),
+        [step.side && sideLabel(step.side), where].filter(Boolean).join(" · ")),
       h("h2", { class: "guide-title" }, step.title),
       h("div", { class: "caption", html: step.caption })));
 }
@@ -973,8 +1017,12 @@ function renderPlayer() {
   }
 
   const waits = pendingWaits();
-  patch(part(".wait-slot"), currentStep() && waits.length
-    ? h("div", { class: "waiting" }, `Waiting for ${waits.map((w) => PREDICATE_TEXT[w]).join(" and ")}…`) : null);
+  const count = countdown(waits);
+  patch(part(".wait-slot"), !currentStep() || !waits.length ? null
+    : count
+      ? h("div", { class: "waiting" }, h("span", { class: "count", style: `--left:${(100 * count.left / count.total).toFixed(1)}%` },
+          h("span", {}, `${count.text} `, h("b", {}, `${Math.ceil(count.left)}s`)), h("i")))
+      : h("div", { class: "waiting" }, `Waiting for ${waits.map((w) => PREDICATE_TEXT[w]).join(" and ")}…`));
 
   // The replies, under the message once it has typed out: Back on the left, Next rightmost.
   const replies = part(".replies");
@@ -993,11 +1041,37 @@ function renderPlayer() {
       title: "The outcome hasn't arrived after 45s. Move on anyway; the picture may not match the caption.",
       onclick: () => goTo(stepIndex + 1, { skipWait: true }) }, "Skip waiting →") : null,
     !atEnd ? h("button", { type: "button", class: "reply is-primary", disabled: busy || waiting, title: waitTitle, onclick: () => goTo(stepIndex + 1) },
-                stepIndex < 0 ? `▶ Start ${act.short}` : "Next →")
+                stepIndex < 0 ? `▶ Start ${act.short}` : handsOverToTemporal(act) ? "Now let's see Temporal →" : "Next →")
       : nextAct ? h("button", { type: "button", class: "reply is-primary", disabled: waiting && !stuck, title: waitTitle, onclick: () => {
           switchScenario(actIndex + 1);
         } }, `On to ${nextAct.short} →`)
-      : h("span", { class: "reply is-quiet" }, "The end. Questions?"));
+      : h("a", { class: "reply is-quiet", href: ASK_AN_EXPERT, target: "_blank", rel: "noopener" }, "The end. Questions? Ask an expert ↗"));
+}
+
+// The last step's "Questions?": Temporal's ask-an-expert page, tagged with this demo's campaign.
+const ASK_AN_EXPERT = "https://temporal.io/pages/ask-an-expert?utm_source=temporal_blog&utm_medium=referral&utm_campaign=resumable_vs_durable_agent_demo";
+
+// The longest the current model outage has had left: the countdown bar's full width.
+let outageLongest = 0;
+
+// A wait with a known end (the model outage, an approval deadline): what ends, and when.
+function countdown(waits) {
+  const outage = state.model_outage_left || 0;
+  outageLongest = outage > 0 ? Math.max(outageLongest, outage) : 0;
+  if (waits.includes("outage_over") && outage > 0) return { text: "The model comes back in", left: outage, total: outageLongest };
+  const deadline = (aw, text) => {
+    const left = aw && aw.deadline_at - state.now;
+    return left > 0 ? { text, left, total: aw.deadline_at - aw.since } : null;
+  };
+  if (waits.includes("deadline_passed")) return deadline(state.adk && state.adk.awaiting, "The approval deadline passes in");
+  if (waits.includes("temporal_timer_fired")) return deadline(state.temporal && state.temporal.awaiting, "The approval deadline passes in");
+  return null;
+}
+
+// The ADK column has played its part and the next step is Temporal's: say so on the button.
+function handsOverToTemporal(act) {
+  const here = act.steps[stepIndex], next = act.steps[stepIndex + 1];
+  return Boolean(here && next && here.side !== "temporal" && next.side === "temporal");
 }
 
 // Once a message has typed out: bring its replies into view, keeping the message's start in sight.
@@ -1044,10 +1118,14 @@ function renderSide(side) {
   }
   const part = (sel) => root.querySelector(sel);
   patch(part(".side-head"), h("div", {}, h("h2", {}, meta.title), h("div", { class: "stack mono" }, meta.stack)), statusChip);
-  patch(part(".side-bar"), renderProcs(side), renderCrashSelect(side));
+  patch(part(".side-bar"), renderProcs(side));
+  // The flow's width per pixel of its height (its viewBox), for its height-aware max-width.
+  part(".flow").style.setProperty("--k", ((NODE_X + NODE_W + BOLT_W + 10) / (TOP + flowNodes().length * (NODE_H + GAP))).toFixed(3));
   patch(part(".flow"), renderFlow(side));
   patch(part(".slot.approval"), renderApproval(side, p));
-  patch(part(".slot.recovery"), renderRecovery(side, p));
+  // A run with the approval policy (Scenario 4, about deadlines) shows "Manager approval" in place of
+  // "Who resumes?": two panels side by side, so the column still fits one screen.
+  patch(part(".slot.recovery"), sideRun(side) && sideRun(side).approval_threshold_cents != null ? null : renderRecovery(side, p));
   patch(part(".slot.persisted"), renderPersistence(side, p));
   if (patch(part(".slot.logs"), renderLogBox(side))) {
     const log = root.querySelector(".log");
@@ -1073,27 +1151,44 @@ function adkHostBusy() {
   return alive.length > 0 && state.now - last < 4;
 }
 
+// A spare (host B, Worker B) shows only in a scenario that starts it, or while it's up.
+function spareInPlay(p) {
+  if (!p.key.endsWith("-b") || p.state !== "stopped") return true;
+  const act = currentAct();
+  return Boolean(act && act.steps.some((st) => (st.actions || []).some((a) => a.post === `/api/processes/${p.key}/start`)));
+}
+
 function renderProcs(side) {
-  return h("div", { class: "procs" }, SIDES[side].procs.map((key) => {
-    const p = state.processes.find((x) => x.key === key);
+  return h("div", { class: "procs" }, SIDES[side].procs.map((key) => state.processes.find((x) => x.key === key)).filter(spareInPlay).map((p) => {
+    const key = p.key;
     const running = p.state === "running";
-    // The dot shows "running"; spell out only the states worth noticing.
-    const label = { running: "", stopped: "stopped", crashed: `crashed (exit ${p.exit_code})`, restarting: "restarting…" }[p.state];
+    // The dot and the button say running or stopped; spell out only the states worth noticing.
+    const label = { running: "", stopped: "", crashed: "crashed", restarting: "restarting…" }[p.state];
     const extra = [label, p.restarts ? `↻ ${p.restarts}` : ""].filter(Boolean).join(" · ");
-    return h("span", { class: `proc ${p.state}`, title: `${p.label}: ${p.state}${p.restarts ? `, restarted ${p.restarts}×` : ""}` }, h("span", { class: "state" }),
-      h("span", {}, h("b", {}, p.label), extra ? [" ", h("span", { class: "muted" }, extra)] : null),
+    return h("span", { class: `proc ${p.state}`, title: `${p.label}: ${p.state}${p.state === "crashed" ? ` (exit ${p.exit_code})` : ""}${p.restarts ? `, restarted ${p.restarts}×` : ""}` }, h("span", { class: "state" }),
+      // Inside the ADK column, "Host A" says enough (the tooltip has the full name).
+      h("span", {}, h("b", {}, p.label.replace(/^ADK host/, "Host")), extra ? [" ", h("span", { class: "muted" }, extra)] : null),
       running ? h("button", { class: "small danger", title: "SIGKILL this process", onclick: () => post(`/api/processes/${key}/kill`).then(refresh) }, "kill -9")
               : h("button", { class: "small", onclick: () => post(`/api/processes/${key}/start`).then(refresh) }, "start"));
   }));
 }
 
-const NODE_X = 14, NODE_W = 370, NODE_H = 46, GAP = 22, TOP = 8;
+// Compact, so a column's flow and its panels fit one screen.
+const NODE_X = 14, NODE_W = 370, NODE_H = 40, GAP = 12, TOP = 6, BOLT_W = 98;
+// The steps drawn: "manager approval" only where it's in play (Scenario 4, or a run with the policy).
+function flowNodes() {
+  const act = currentAct();
+  const inPlay = (act && act.id === "act4") || (state.run && state.run.approval_threshold_cents != null);
+  return NODES.filter((n) => n.id !== "approval" || inPlay);
+}
+
 function renderFlow(side) {
   const ns = nodeStates(side);
+  const NODES = flowNodes();
   const armed = state.faults[side];
   const focus = (currentStep() && currentStep().focus) || [];
   const height = TOP + NODES.length * (NODE_H + GAP);
-  const svg = s("svg", { viewBox: `0 0 ${NODE_X + NODE_W + 92} ${height}`, role: "img", "aria-label": `${side} flow` });
+  const svg = s("svg", { viewBox: `0 0 ${NODE_X + NODE_W + BOLT_W + 10} ${height}`, role: "img", "aria-label": `${side} flow` });
   NODES.forEach((n, i) => {
     const y = TOP + i * (NODE_H + GAP);
     if (i > 0) {
@@ -1108,15 +1203,16 @@ function renderFlow(side) {
                        "aria-label": `${n.label}: ${st.sub || ""}. Show code`,
                        onclick: () => openNode(side, n.id), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openNode(side, n.id); } } });
     g.append(s("rect", { class: "box", x: NODE_X, y, width: NODE_W, height: NODE_H, rx: 8 }));
-    g.append(s("text", { x: NODE_X + 12, y: y + 19 }, n.label));
-    g.append(s("text", { class: "sub", x: NODE_X + 12, y: y + 36 }, st.sub || n.sub));
+    g.append(s("text", { x: NODE_X + 12, y: y + 16 }, n.label));
+    g.append(s("text", { class: "sub", x: NODE_X + 12, y: y + 31 }, st.sub || n.sub));
+    if (st.by && st.by.length) g.append(s("text", { class: "by", x: NODE_X + NODE_W - 10, y: y + 31, "text-anchor": "end" }, `by ${st.by.join(", ")}`));
     // Badges, right to left
     let bx = NODE_X + NODE_W - 8;
     const badge = (cls, text) => {
       const w = 9 + text.length * 6.3;
       bx -= w;
-      g.append(s("g", { class: `badge ${cls}` }, s("rect", { x: bx, y: y + 6, width: w, height: 17, rx: 8.5 }),
-        s("text", { x: bx + w / 2, y: y + 18.5, "text-anchor": "middle" }, text)));
+      g.append(s("g", { class: `badge ${cls}` }, s("rect", { x: bx, y: y + 5, width: w, height: 16, rx: 8 }),
+        s("text", { x: bx + w / 2, y: y + 16.5, "text-anchor": "middle" }, text)));
       bx -= 4;
     };
     if (st.moved != null && st.moved > 0) {
@@ -1126,15 +1222,25 @@ function renderFlow(side) {
     }
     if (st.replayed) badge("rec", `deduped ×${st.replayed}`);
     if (st.attempts > 1) badge("attempt", `attempt ${st.attempts}`);
+    if (n.id === "decide" && sideRun(side) && st.cls !== "done" && state.model_outage_left > 0)
+      badge("outage", `⏱ model back in ${Math.ceil(state.model_outage_left)}s`);
+    // The approval deadline, while a manager is awaited: counting down, then how long ago it passed.
+    const awaiting = n.id === "approval" && (state[side] || {}).awaiting;
+    if (awaiting && st.cls !== "done") {
+      const left = awaiting.deadline_at - state.now;
+      if (left > 0) badge("outage", `⏱ deadline in ${Math.ceil(left)}s`);
+      else badge("overdue", `deadline passed ${Math.floor(-left)}s ago`);
+    }
     svg.append(g);
     // Crash markers
-    const bolt = (yy, text) => svg.append(s("g", { class: "bolt" },
-      s("rect", { x: NODE_X + NODE_W + 6, y: yy - 9, width: 82, height: 18, rx: 4 }),
-      s("text", { x: NODE_X + NODE_W + 12, y: yy + 4 }, `⚡ ${text}`)));
-    if (armed === "refund_charged" && n.id === "refund_payment") bolt(y + NODE_H / 2, "inside");
-    if (armed === "refund_returned" && n.id === "refund_payment") bolt(y + NODE_H + GAP / 2, "after return");
-    if (armed === "before_notify" && n.id === "notify_customer") bolt(y - GAP / 2, "before");
-    if (armed === "batch_partial" && n.id === "refund_payment") bolt(y + NODE_H / 2, "mid-batch");
+    // "crash point" beside where the process will die; the marker's height says where, its tooltip in words.
+    const bolt = (yy, where) => svg.append(s("g", { class: "bolt" }, s("title", {}, `Crash point: the process dies ${where}`),
+      s("rect", { x: NODE_X + NODE_W + 6, y: yy - 9, width: BOLT_W, height: 18, rx: 4 }),
+      s("text", { x: NODE_X + NODE_W + 12, y: yy + 4 }, "⚡ crash point")));
+    if (armed === "refund_charged" && n.id === "refund_payment") bolt(y + NODE_H / 2, "inside refund_payment, after the money moves");
+    if (armed === "refund_returned" && n.id === "refund_payment") bolt(y + NODE_H + GAP / 2, "after refund_payment returns");
+    if (armed === "before_notify" && n.id === "notify_customer") bolt(y - GAP / 2, "before notify_customer");
+    if (armed === "batch_partial" && n.id === "refund_payment") bolt(y + NODE_H / 2, "partway through a batch of refunds");
   });
   return svg;
 }
@@ -1142,7 +1248,7 @@ function renderFlow(side) {
 function renderApproval(side, p) {
   const run = sideRun(side);
   if (!run || run.approval_threshold_cents == null) return null;
-  const where = side === "adk" ? "Timer: an asyncio task in the ADK host's memory" : "Timer: on the Temporal Service (TimerStarted)";
+  const where = side === "adk" ? "Timer: an asyncio task in the ADK host's memory" : "Timer: on the Temporal Server (TimerStarted)";
   const escalated = businessOps(side).escalations;
   if (p.awaiting) {
     const left = Math.round(p.awaiting.deadline_at - state.now);
@@ -1160,7 +1266,7 @@ function renderApproval(side, p) {
   }
   if (side === "temporal" && p.timerFired && !escalated) {
     return h("div", { class: "panel alert" }, h("h3", {}, "Manager approval"),
-      h("div", { class: "big" }, "Deadline passed: the timer fired on the Temporal Service."),
+      h("div", { class: "big" }, "Deadline passed: the timer fired on the Temporal Server."),
       h("div", { class: "line muted" }, "TimerFired is in the history. The first Worker to come back acts on it."));
   }
   if (escalated) {
@@ -1248,17 +1354,6 @@ function temporalRow(e) {
   return { key: String(e.id), n: e.id, text: [h("b", {}, e.type), ...interesting, h("span", { class: "muted" }, extra, data ? ` ${data}` : "")], cls };
 }
 
-const CRASH_OPTION = { refund_charged: "inside refund_payment", refund_returned: "after refund_payment returns",
-                       before_notify: "before notify_customer", batch_partial: "mid-batch (parallel refunds)" };
-function renderCrashSelect(side) {
-  const armed = state.faults[side];
-  return h("label", { class: `crash ${armed ? "armed" : ""}`, title: "The next process on this side to reach the point dies with os._exit" },
-    "⚡ Crash",
-    h("select", { "aria-label": `Crash point for ${side}`, onchange: (e) => post("/api/faults", { side, point: e.target.value || null }).then(refresh) },
-      h("option", { value: "" }, "not armed"),
-      Object.entries(state.fault_points).map(([k, v]) => h("option", { value: k, selected: armed === k, title: v }, CRASH_OPTION[k] || k))));
-}
-
 function logClass(line) {
   return /CRASH|died|SIGKILL|Error/.test(line) ? "crash" : /^[▶■↻]/.test(line) ? "sys" : /recorded in history|persisted/.test(line) ? "good" : "";
 }
@@ -1334,7 +1429,7 @@ function renderBusiness() {
 // ---- Node dialog: code and what's persisted -------------------------------------
 const WHAT = {
   request: "How a refund starts. ADK: the host creates a session (with this run's settings in its state) and runs the agent with the customer's message. Temporal: the API starts a Workflow; the Workflow creates an in-memory ADK session and runs the same agent.",
-  decide: "The model decides the next step. Here it is a deterministic fake that follows INSTRUCTION, so every run is the same (set REFUND_DEMO_MODEL for Gemini). On Temporal, TemporalModel runs each model call as an Activity, so a model answer is recorded once and never paid for twice.",
+  decide: "The model decides the next step. Here it is a deterministic fake that follows the agent's instruction, so every run is the same (set REFUND_DEMO_MODEL for Gemini). On Temporal, TemporalModel runs each model call as an Activity, so a model answer is recorded once and never paid for twice.",
   approval: "The approval policy is ADK's own tool confirmation on both sides. What differs is the deadline: Temporal waits in wait_condition with a timeout (a durable timer) and escalates when it fires.",
   refund_payment: "The side effect that matters: money leaves the company. The same plain ADK tool on both sides (tools.py, no Temporal in it). On Temporal, a thin Activity in temporal_side/activities.py calls it, with a start-to-close timeout and a retry policy.",
   record_refund: "Records the refund in the order system.",
@@ -1349,10 +1444,17 @@ const TEMPORAL_TASK_DOC = docLink("https://docs.temporal.io/tasks#how-worker-pro
 
 // Code views that aren't a step in the diagram: linked from the captions.
 const EXTRA_NODES = {
+  crash: {
+    label: "the crash points",
+    what: {
+      adk: "A crash point is armed per side. When the agent reaches it, the process disarms it and dies with os._exit(137), the same as kill -9: nothing is flushed and no cleanup runs. The callbacks place the points around each tool call.",
+      temporal: "A crash point is armed per side. When the agent reaches it, the process disarms it and dies with os._exit(137), the same as kill -9: nothing is flushed and no cleanup runs. The callbacks place the points around each tool call.",
+    },
+  },
   agent: {
     label: "the agent and how it runs",
     what: {
-      adk: "The same agent.py on both sides: one LlmAgent, three tools, an approval policy. Here the ADK host runs it with resumability on (ResumabilityConfig(is_resumable=True)) and a persistent SqliteSessionService, as the ADK docs describe.",
+      adk: "The same agent.py on both sides: one LlmAgent, three tools, an approval policy. Here the ADK host runs it with resumability on (ResumabilityConfig(is_resumable=True)) and a persistent session DB, as the ADK docs describe.",
       temporal: "The same agent.py, built with a model and tools that run as Activities through the official Temporal ADK plugin. The Workflow runs the agent; every model call and tool call is recorded in its event history.",
     },
   },
@@ -1368,13 +1470,15 @@ const EXTRA_NODES = {
 const CODE_HIGHLIGHT = { adk: { recovery: "run_async", runtime: "run_async" } };
 const RECOVERY_WHAT = {
   adk: "ADK resumes an invocation only when something calls <mark>runner.run_async</mark> with its invocation_id. After a crash, something has to find the unfinished invocations and pick a host to resume them on. This is the smallest version of that code: the scan finds them, /recover passes each invocation_id to drive, and drive calls <mark>runner.run_async</mark> (highlighted in the last block below). A production version also needs a sweeper schedule, a way to tell dead from slow, leases, deadlines and a story for code changes." + ADK_RESUME_DOC,
-  temporal: "Nothing to write. A Worker is a stateless poller: any Worker on the task queue picks up any Workflow task and rebuilds the Workflow's state by replaying its event history. The Temporal Service notices a dead Worker through timeouts and hands its work to another." + TEMPORAL_TASK_DOC,
+  temporal: "Nothing to write. A Worker is a stateless poller: any Worker on the task queue picks up any Workflow task and rebuilds the Workflow's state by replaying its event history. The Temporal Server notices a dead Worker through timeouts and hands its work to another." + TEMPORAL_TASK_DOC,
 };
 
 let dialogState = null;
-async function openNode(side, node) {
+// `term`: the code a caption pointed at; its lines are highlighted and scrolled to.
+async function openNode(side, node, term = null) {
   const dialog = document.getElementById("node-dialog");
-  dialogState = { side, node, tab: dialogState && dialogState.node === node ? dialogState.tab : "code", source: null };
+  const tab = term ? "code" : dialogState && dialogState.node === node ? dialogState.tab : "code";
+  dialogState = { side, node, tab, term, source: null };
   if (!dialog.open) dialog.showModal();
   renderDialog();
   const key = node === "done" ? "agent" : node;
@@ -1382,6 +1486,7 @@ async function openNode(side, node) {
   if (dialogState && dialogState.node === node && dialogState.side === side) {
     dialogState.source = res.status === 200 ? res.body : [];
     renderDialog();
+    if (term) { const line = dialog.querySelector("pre.code .cl.hl"); if (line) line.scrollIntoView({ block: "center" }); }
   }
 }
 
@@ -1401,7 +1506,7 @@ function renderDialog() {
     // A setup view has code only; a step also has what this run persisted for it.
     extra ? null : h("div", { class: "tabs", role: "group", "aria-label": "View" },
       [["code", "Code"], ["persisted", "What's persisted"]].map(([t, l]) => h("button", { type: "button", "aria-pressed": String(tab === t), onclick: () => setTab(t) }, l))),
-    tab === "code" || extra ? renderCode(source, (CODE_HIGHLIGHT[side] || {})[node]) : renderPersisted(side, node),
+    tab === "code" || extra ? renderCode(source, dialogState.term || (CODE_HIGHLIGHT[side] || {})[node]) : renderPersisted(side, node),
   );
 }
 
@@ -1463,7 +1568,7 @@ function renderPersisted(side, node) {
   const chosen = recs.filter(pick);
   const intro = side === "adk"
     ? "Events in the ADK session database for this run. A tool's result exists only once its function response event has been written."
-    : "Events in this Workflow's history on the Temporal Service. ActivityTaskCompleted is written by the Service when the Activity reports its result, before any Workflow code runs.";
+    : "Events in this Workflow's history on the Temporal Server. ActivityTaskCompleted is written by the Server when the Activity reports its result, before any Workflow code runs.";
   const ops = businessOps(side)[node];
   const results = side === "adk" ? chosen.reduce((a, e) => a + (e.responses || []).filter((r) => r.name === node).length, 0)
                                  : chosen.filter((e) => e.type === "ActivityTaskCompleted").length;
@@ -1492,7 +1597,7 @@ document.getElementById("player").addEventListener("click", (e) => {
   e.stopPropagation();
   finishTyping();
   const [side, node] = link.dataset.code.split("/");
-  openNode(side, node);
+  openNode(side, node, link.dataset.hl || null);
 });
 document.getElementById("node-dialog").addEventListener("close", () => { dialogState = null; });
 

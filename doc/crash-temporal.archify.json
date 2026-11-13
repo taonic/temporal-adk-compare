@@ -41,7 +41,7 @@
     {
       "id": "service",
       "type": "cloud",
-      "label": "Temporal Service",
+      "label": "Temporal Server",
       "sublabel": "event history"
     },
     {
@@ -123,7 +123,7 @@
       "y": 335,
       "label": "Workflow task never completes",
       "variant": "security",
-      "note": "Worker killed (os._exit) in after_tool_callback; the Service times the task out"
+      "note": "Worker killed (os._exit) in after_tool_callback; the Server times the task out"
     },
     {
       "id": "poll",
@@ -183,7 +183,7 @@
       "dot": "emerald",
       "title": "No repeat",
       "items": [
-        "The Temporal Service recorded the result when the Activity reported back",
+        "The Temporal Server recorded the result when the Activity reported back",
         "Replay returns the recorded result; refund_payment does not run again",
         "Nobody called resume: the next Worker to poll picked it up"
       ]

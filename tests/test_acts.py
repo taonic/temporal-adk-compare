@@ -19,7 +19,7 @@ def clean_stage(api):
     api.post("/api/reset")
 
 
-def test_act4_crash_after_tool_returned(api):
+def test_act3_crash_after_tool_returned(api):
     """Same crash point: ADK refunds twice once resumed; Temporal refunds once, with no one resuming it."""
     api.post("/api/faults", {"side": "both", "point": "refund_returned"})
     before = restarts(api.state(), "adk-a")
@@ -40,7 +40,7 @@ def test_act4_crash_after_tool_returned(api):
 
 
 @pytest.mark.parametrize("use_key", [False, True])
-def test_act4_crash_inside_tool_needs_idempotency_on_both(api, use_key):
+def test_act3_crash_inside_tool_needs_idempotency_on_both(api, use_key):
     """Crash after the money moved but before the tool returned: neither runtime can know. Both need a key."""
     api.post("/api/settings", {"use_idempotency_key": use_key})
     api.post("/api/faults", {"side": "both", "point": "refund_charged"})
@@ -66,7 +66,6 @@ def test_act1_nobody_resumes_adk(api):
     """
     api.post("/api/settings", {"auto_restart": False})
     api.post("/api/processes/adk-b/start")
-    api.post("/api/processes/worker-b/start")
     api.post("/api/faults", {"side": "both", "point": "before_notify"})
     run = api.post("/api/runs", {"side": "adk"})
     assert list(run["started"]) == ["adk"]
@@ -84,15 +83,23 @@ def test_act1_nobody_resumes_adk(api):
     assert table(state, "notifications", "adk") == 1
     assert refunds(state, "adk") == 1, "resuming after a crash before notify does not repeat the refund"
 
+    # Worker B starts once Worker A is gone, so every step says which Worker did it.
     run = api.post("/api/runs/continue", {"side": "temporal"})
     assert run["run_id"] == state["run"]["run_id"] and set(run["started"]) == {"adk", "temporal"}
-    state = api.wait(TEMPORAL_DONE, what="the other Worker to finish the refund")
-    assert proc_state(state, "worker-a") == "crashed" or proc_state(state, "worker-b") == "crashed"
+    api.wait(lambda s: proc_state(s, "worker-a") == "crashed", what="Worker A to crash")
+    api.post("/api/processes/worker-b/start")
+    state = api.wait(TEMPORAL_DONE, what="Worker B to finish the refund")
     assert table(state, "notifications", "temporal") == 1
     assert refunds(state, "temporal") == 1
+    completed_by = {e["activity"]: e["by"] for e in state["temporal"]["history"] if e["type"] == "ActivityTaskCompleted"}
+    assert (completed_by["refund_payment"], completed_by["record_refund"], completed_by["notify_customer"]) == \
+        ("worker-a", "worker-a", "worker-b"), "replay keeps who completed each Activity"
+    # ADK's events carry the host that wrote them: the refund on host A, the email after the resume on B.
+    hosts = {r["name"]: e["host"] for e in state["adk"]["events"] for r in e["responses"]}
+    assert (hosts["refund_payment"], hosts["notify_customer"]) == ("host-a", "host-b")
 
 
-def test_act3_in_memory_timer_fires_while_the_host_lives(api):
+def test_act4_in_memory_timer_fires_while_the_host_lives(api):
     """Both pause the same way and both enforce the deadline, as long as every process stays up."""
     api.post("/api/runs", {"approval": True, "approval_deadline_seconds": 4})
     api.wait(lambda s: s["adk"].get("status") == "awaiting_approval" and s["temporal"].get("awaiting"),
@@ -106,8 +113,8 @@ def test_act3_in_memory_timer_fires_while_the_host_lives(api):
         assert table(state, "notifications", side) == 1
 
 
-def test_act3_timers_when_every_process_stops(api):
-    """Stop every process during the wait. Temporal's timer fires on the Service; ADK's died with its host."""
+def test_act4_timers_when_every_process_stops(api):
+    """Stop every process during the wait. Temporal's timer fires on the Server; ADK's died with its host."""
     api.post("/api/runs", {"approval": True, "approval_deadline_seconds": 4})
     state = api.wait(lambda s: s["adk"].get("status") == "awaiting_approval" and s["temporal"].get("awaiting"),
                      what="both sides to wait for a manager")
@@ -131,7 +138,7 @@ def test_act3_timers_when_every_process_stops(api):
     assert refunds(state, "adk") == 1
 
 
-def test_act3_approval_in_time(api):
+def test_act4_approval_in_time(api):
     api.post("/api/runs", {"approval": True, "approval_deadline_seconds": 60})
     api.wait(lambda s: s["temporal"].get("awaiting"), what="Temporal to wait for a manager")
     api.post("/api/approve", {"side": "temporal", "approved": True})
@@ -197,7 +204,7 @@ def test_two_hosts_resume_the_same_invocation(api, use_key):
 
 def test_act2_retries_in_memory_vs_persisted(api):
     """Both sides retry the model on the same schedule. A crash mid-retry ends ADK's
-    in-process retries; Temporal's attempt count lives on the Service and carries on."""
+    in-process retries; Temporal's attempt count lives on the Server and carries on."""
     api.post("/api/model-outage", {"seconds": 30})
     api.post("/api/runs", {})
 

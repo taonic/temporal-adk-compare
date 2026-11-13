@@ -42,7 +42,7 @@ AGENT = build_agent(
         # demo's fake model; allow for the slowest real model response.
         start_to_close_timeout=timedelta(seconds=10), summary="refund_agent decides the next step",
         # A model provider returning 429s is retried until it recovers, however long that takes.
-        # The attempt count and the next retry time live on the Temporal Service, not in a Worker.
+        # The attempt count and the next retry time live on the Temporal Server, not in a Worker.
         retry_policy=RetryPolicy(initial_interval=timedelta(seconds=1), maximum_interval=timedelta(seconds=4)))),
     refund_payment=activity_as_tool(activities.refund_payment, summary="refund_payment", **TOOL_OPTIONS),
     record_refund=activity_as_tool(activities.record_refund, summary="record_refund", **TOOL_OPTIONS),

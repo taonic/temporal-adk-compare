@@ -1,0 +1,46 @@
+# End-to-end tests against the live demo (tests/e2e/test_live.py): a new visitor gets a stage of
+# their own on Daytona and plays a scenario through it, and two visitors' stages stay apart.
+# Runs after each successful deploy, every day, and by hand (Actions -> E2E (live) -> Run workflow).
+# The tests delete the sandboxes they started; they need the repository secret DAYTONA_API_KEY.
+
+name: E2E (live)
+
+on:
+  workflow_run:
+    workflows: [Deploy to Fly.io]
+    types: [completed]
+  schedule:
+    - cron: "0 14 * * *" # 14:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run at a time: each holds a few sandboxes while it runs.
+concurrency:
+  group: e2e-live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    # After a deploy, only one that succeeded.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_BASE_URL: https://temporal-adk-compare.fly.dev
+      DAYTONA_API_KEY: ${{ secrets.DAYTONA_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+
+      - name: Install dependencies and a browser
+        run: |
+          uv sync --frozen --group e2e
+          uv run playwright install --with-deps chromium
+
+      - name: Live tests
+        run: uv run pytest tests/e2e/test_live.py -v -s

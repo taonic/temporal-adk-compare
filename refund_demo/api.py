@@ -72,7 +72,7 @@ async def _connect_temporal() -> Client:
                                     plugins=[GoogleAdkPlugin()])
     except RuntimeError:
         pass
-    # No Temporal Service yet: start a local dev server, owned by this API.
+    # No Temporal Server yet: start a local dev server, owned by this API.
     proc = ManagedProcess("temporal", "Temporal dev server", "system",
                           ["temporal", "server", "start-dev", "--db-filename", str(config.VAR / "temporal.db"),
                            "--log-level", "error", *(["--ui-ip", config.TEMPORAL_UI_IP] if config.TEMPORAL_UI_IP else [])])
@@ -85,7 +85,7 @@ async def _connect_temporal() -> Client:
                                         plugins=[GoogleAdkPlugin()])
         except RuntimeError:
             continue
-    raise RuntimeError(f"Temporal Service did not come up on {config.TEMPORAL_ADDRESS}")
+    raise RuntimeError(f"Temporal Server did not come up on {config.TEMPORAL_ADDRESS}")
 
 
 async def _wait_http(url: str, attempts: int = 60) -> None:
@@ -479,6 +479,7 @@ def _adk_event(i: int, event) -> dict:
     item: dict[str, Any] = {"i": i, "id": event.id, "ts": event.timestamp, "author": event.author,
                             "invocation_id": event.invocation_id, "kind": "event", "name": None}
     # Parallel tool calls share one event: every call, and later every result, is a part of it.
+    item["host"] = (event.custom_metadata or {}).get("host")
     item["calls"] = [{"name": p.function_call.name, "call_id": p.function_call.id, "data": p.function_call.args}
                      for p in parts if p.function_call]
     item["responses"] = [{"name": p.function_response.name, "call_id": p.function_response.id,
@@ -549,7 +550,7 @@ def _history_event(event, scheduled: dict[int, dict]) -> dict:
     elif event.HasField("activity_task_completed_event_attributes"):
         attrs = event.activity_task_completed_event_attributes
         item.update(activity=scheduled.get(attrs.scheduled_event_id, {}).get("activity"),
-                    data=_payloads(attrs.result))
+                    data=_payloads(attrs.result), by=attrs.identity)
     elif event.HasField("activity_task_timed_out_event_attributes"):
         attrs = event.activity_task_timed_out_event_attributes
         item.update(activity=scheduled.get(attrs.scheduled_event_id, {}).get("activity"))

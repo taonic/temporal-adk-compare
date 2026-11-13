@@ -55,7 +55,7 @@ async def main(name: str) -> None:
                     activities.escalate_to_manager],
         interceptors=[_LogActivities(name)],
         # A Worker caches the Workflows it runs and gets their next tasks on its
-        # own queue. If it dies, the Service moves those tasks back to the shared
+        # own queue. If it dies, the Server moves those tasks back to the shared
         # queue after this timeout (default 10s); shorter for the demo.
         sticky_queue_schedule_to_start_timeout=timedelta(seconds=2),
         # The agent definition and its tools are shared with the ADK side and

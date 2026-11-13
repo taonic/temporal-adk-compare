@@ -1,6 +1,6 @@
 # Runbook
 
-For whoever presents the demo. About 24 minutes for all four scenarios and the wrap-up. For a short slot, run Scenarios 1 and 4 (about 10 minutes): who restarts the work, and what a crash after a side effect costs.
+For whoever presents the demo. About 24 minutes for all four scenarios and the wrap-up. For a short slot, run Scenarios 1 and 3 (about 10 minutes): who restarts the work, and what a crash after a side effect costs.
 
 ## Before the meeting
 
@@ -22,16 +22,17 @@ For whoever presents the demo. About 24 minutes for all four scenarios and the w
 - Click any node in either diagram: **Code** shows the source behind it, and **What's persisted** shows what this run recorded for it.
 - Each column's **Process log** is collapsed; its summary line shows the latest output. Click it to open the full log.
 - **Manual ▾** in the header starts a run by hand, starts a model outage, resets, and links to the Temporal UI. The player does all of this for you in the scenarios.
-- **⚡ Crash** in each column arms a crash point by hand.
+- A **⚡ crash point** marker on a column's flow shows where its process will die; the scenario arms it. Hover it for the exact place.
 
 ### Scenario 1 · Recovery: automatic vs on request (3 min)
 
 | Step | Point at | Say |
 |---|---|---|
-| Set the stage | The two stack lines under the column titles; four processes running, auto-restart **off** | Same `agent.py` on both sides. ADK is configured properly: resumability on, a persistent session database. A spare is ready on each side. |
+| Set the stage | The two stack lines under the column titles; ADK hosts A and B and Worker A running, auto-restart **off** | Same `agent.py` on both sides. ADK is configured properly: resumability on, a persistent session database. ADK's spare is ready; Temporal's starts once Worker A is gone. |
 | ADK: host A dies | Host A *crashed*, host B running; chip *unfinished · nobody working on it* | Click ADK's *Who resumes?* panel to show `recovery.py`. |
 | Run the recovery scan | ADK completes, still one refund | ADK resumability works. The question is who owns triggering it. |
-| Temporal: the busy Worker dies | Temporal completes within about 5s; its *Who resumes?* panel names the other Worker | Nobody called anything. |
+| Temporal: Worker A dies | *by Worker A* on `refund_payment` and `record_refund`; no Worker running | The Workflow waits on the Temporal Server. |
+| Start Worker B | Temporal completes within about 5s; `notify_customer` reads *by Worker B*, the earlier steps still *by Worker A* | Nobody called anything: the next Worker on the task queue took it. |
 
 The `StaleSessionError` mentioned in the caption really happened while building this demo: a test resumed an invocation that was still running. It's a good example of why "find unfinished invocations" is harder than it looks.
 
@@ -44,28 +45,15 @@ The `StaleSessionError` mentioned in the caption really happened while building 
 | Kill ADK host A | ADK *model call never finished · invocation stopped*, its *Who resumes?* panel red | The retry loop was memory in a dead process. The step waits for the outage to end too. |
 | Resume ADK | ADK completes, one refund | In-process retries are only as durable as the process. |
 | Temporal: the model is down | A new 30s outage. Temporal *LLM decides*: *attempt 2, retrying* | The same as ADK so far. |
-| Kill Worker A | Temporal *completed*. In **What's persisted** for *LLM decides*: `ActivityTaskStarted` with `attempt` 3 or more | The next attempt was a record on the Temporal Service, and the attempt count carried on across the restart. |
+| Kill Worker A | Temporal *completed*. In **What's persisted** for *LLM decides*: `ActivityTaskStarted` with `attempt` 3 or more | The next attempt was a record on the Temporal Server, and the attempt count carried on across the restart. |
 
 Don't linger on the Temporal outage step: its outage lasts 30s, and once it ends there is nothing left to retry. If the kill lands while Worker A is mid-attempt, Temporal first waits out the model Activity's 10s start-to-close timeout, so the last step can take up to 20s.
 
-### Scenario 3 · Timers: durable vs in memory (5 min, including two 20s waits)
+### Scenario 3 · Tool results: recorded on completion vs saved later (7 min)
 
 | Step | Point at | Say |
 |---|---|---|
-| A policy with a deadline | | Both pause with ADK's own tool confirmation, and both enforce the deadline: ADK with an `asyncio` timer in the host, Temporal with a durable timer. |
-| ADK: waits for a manager | *manager approval* amber; countdown; the approval panel says where the timer lives | ADK's process log: *timer held in this process's memory*. |
-| Stop ADK host A | Host A *stopped*; the countdown passes zero | The paused run survives in SQLite. Its timer doesn't. |
-| Bring host A back | *Deadline passed Ns ago. Nothing woke this invocation.* | The restarted host doesn't know a deadline exists. |
-| Late approval | ADK refunds | Resumable, yes. Acting on time needs infrastructure. |
-| Temporal: waits for a manager | `TimerStarted` in the event history | Equal to ADK so far. |
-| Stop Worker A | No Worker running; `TimerFired` appears in the history when the countdown ends | The timer fired on the Temporal Service with no Worker running. |
-| Bring Worker A back | *escalated and denied*, a row in *Escalations* | A timeout argument and an exception handler. Click the pinned claims to open them in full during questions. |
-
-### Scenario 4 · Tool results: recorded on completion vs saved later (7 min)
-
-| Step | Point at | Say |
-|---|---|---|
-| A crash right after the side effect | ⚡ *after return* on both `refund_payment` nodes | No idempotency key yet. |
+| A crash right after the side effect | ⚡ *crash point* just below both `refund_payment` nodes | No idempotency key yet. |
 | ADK: host A dies after the refund | `refund_payment`: *money moved, result NOT recorded*; chip *unfinished · nobody working on it* | Host A came back idle, as in Scenario 1. |
 | Resume ADK | Ledger: **ADK refunded $1,000.00** | Quote the ADK docstring in the caption. This is documented behaviour, not a bug. |
 | Temporal: Worker A dies after the refund | `refund_payment`: *recorded*; Temporal *completed*, one refund | Click the Temporal node's **What's persisted** to show `ActivityTaskCompleted`. The Worker found its work on the task queue. |
@@ -76,13 +64,26 @@ Don't linger on the Temporal outage step: its outage lasts 30s, and once it ends
 | Resume ADK | ADK **deduped ×1**; ledger row *duplicate request: original returned* | |
 | Temporal: same crash | Temporal **deduped ×1** | Recap the three differences in the caption. |
 
+### Scenario 4 · Timers: durable vs in memory (5 min, including two 20s waits)
+
+| Step | Point at | Say |
+|---|---|---|
+| A policy with a deadline | | Both pause with ADK's own tool confirmation, and both enforce the deadline: ADK with an `asyncio` timer in the host, Temporal with a durable timer. |
+| ADK: waits for a manager | *manager approval* amber; countdown; the approval panel says where the timer lives | ADK's process log: *timer held in this process's memory*. |
+| Stop ADK host A | Host A *stopped*; the countdown passes zero | The paused run survives in the session DB. Its timer doesn't. |
+| Bring host A back | *Deadline passed Ns ago. Nothing woke this invocation.* | The restarted host doesn't know a deadline exists. |
+| Late approval | ADK refunds | Resumable, yes, but the deadline passed and nothing denied it: a refund the policy should have refused went through. Resuming late is not acting on time. |
+| Temporal: waits for a manager | `TimerStarted` in the event history | Equal to ADK so far. |
+| Stop Worker A | No Worker running; `TimerFired` appears in the history when the countdown ends | The timer fired on the Temporal Server with no Worker running. |
+| Bring Worker A back | *escalated and denied*, a row in *Escalations* | A timeout argument and an exception handler. Click the pinned claims to open them in full during questions. |
+
 ### Wrap-up (3 min)
 
 Content only: the runtime columns and the ledger are hidden.
 
 | Slide | Say |
 |---|---|
-| Durable execution, in four results | One row per scenario: automated process recovery, durable retries, durable timers, strongly consistent tool execution. Point at the note before anyone asks: a crash *inside* a tool needs an idempotency key on either runtime. |
+| Durable execution, in four results | One row per scenario: automated process recovery, durable retries, strongly consistent tool execution, durable timers. Point at the note before anyone asks: a crash *inside* a tool needs an idempotency key on either runtime. |
 | What each runtime gives you | The full comparison, with where the demo showed each row. Human-in-the-loop is native on both. |
 | Use them together | Temporal owns the business process; ADK owns the agent's reasoning. Same `agent.py`. |
 | Questions to ask any agent runtime | Leave it on screen during questions. |
@@ -107,7 +108,7 @@ Content only: the runtime columns and the ledger are hidden.
 ## Questions you will get
 
 **"You crippled ADK. Real deployments use Agent Engine, Agent Executor or a database service."**
-The ADK side uses ADK's own resumability and a persistent session service, exactly as documented. Scenario 4's gap is about *when* the result is written relative to the side effect; a different session store doesn't change the order. Scenarios 1, 2 and 3 are about who triggers recovery, where retry state lives, and who acts on deadlines. A managed runtime may provide that, which is exactly the question to ask its vendor (README, "Questions worth asking").
+The ADK side uses ADK's own resumability and a persistent session service, exactly as documented. Scenario 3's gap is about *when* the result is written relative to the side effect; a different session store doesn't change the order. Scenarios 1, 2 and 4 are about who triggers recovery, where retry state lives, and who acts on deadlines. A managed runtime may provide that, which is exactly the question to ask its vendor (README, "Questions worth asking").
 
 **"Temporal also refunded twice."**
 Yes, in the crash-inside-the-tool case, and the demo shows it on purpose. Durable execution records a completed Activity exactly once and never re-runs it; it executes an Activity at least once. Side effects need idempotency on any runtime.
@@ -119,7 +120,7 @@ Then a crash re-runs the agent from the start, including the model's decision an
 It removes nondeterminism from the stage, nothing else. Model calls still go through ADK and, on Temporal, through `TemporalModel` Activities. With `REFUND_DEMO_MODEL=gemini-2.5-flash` the same code calls Gemini.
 
 **"What about ADK graph workflows and their retry policies?"**
-They add retries and timeouts per node in the agent graph. They don't change Scenario 4, where the problem is a side effect that happened but was not recorded, or Scenarios 1 and 3, where the problem is who triggers recovery and deadlines. For node retries, ask the Scenario 2 question: where does the retry state live when the process dies?
+They add retries and timeouts per node in the agent graph. They don't change Scenario 3, where the problem is a side effect that happened but was not recorded, or Scenarios 1 and 4, where the problem is who triggers recovery and deadlines. For node retries, ask the Scenario 2 question: where does the retry state live when the process dies?
 
 **"How does Temporal know the Worker died?"**
 Timeouts. A Workflow task the Worker never completes times out (4s here), and so does an Activity attempt (6s here). The work then goes to any Worker polling the queue. In the history, the first shows as `WorkflowTaskTimedOut`. A retried Activity shows as `ActivityTaskStarted` with `attempt: 2`, because Temporal records an Activity's attempts in that event rather than one event per attempt.

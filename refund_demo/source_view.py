@@ -36,7 +36,6 @@ class Snippet:
 
 Part = Union[Callable[..., Any], Snippet]
 
-INSTRUCTION = Snippet("INSTRUCTION", "agent.py", "INSTRUCTION = ", '"""')
 ADK_RUN_ROUTE = Snippet("POST /runs", "adk_side/host.py", '    @app.post("/runs")', "        return")
 ADK_CONFIRM_ROUTE = Snippet("POST /confirm", "adk_side/host.py", '    @app.post("/confirm")', "        return")
 ADK_RESUME_ROUTE = Snippet("POST /resume", "adk_side/host.py", '    @app.post("/resume")', "        return")
@@ -54,7 +53,7 @@ TEMPORAL_START = Snippet("start the Workflow", "api.py", "    temporal_call = de
 SOURCES: dict[str, dict[str, list[Part]]] = {
     "adk": {
         "request": [ADK_RUN_ROUTE, host.request_message],
-        "decide": [INSTRUCTION, ADK_MODEL_RETRY, host.make_model, fake_llm.FakeRefundLlm.generate_content_async],
+        "decide": [ADK_MODEL_RETRY, host.make_model, fake_llm.FakeRefundLlm.generate_content_async],
         "approval": [agent.needs_manager_approval, ADK_DEADLINE_TIMER, ADK_CONFIRM_ROUTE],
         "refund_payment": [tools.refund_payment],
         "record_refund": [tools.record_refund],
@@ -63,11 +62,11 @@ SOURCES: dict[str, dict[str, list[Part]]] = {
         "runtime": [host.make_runner, ADK_RUN_ROUTE, ADK_RESUME_ROUTE, ADK_DRIVE],
         "persistence": [host.make_runner, recovery.invocation_status],
         "recovery": [recovery.find_unfinished_invocations, recovery.invocation_status, ADK_RECOVER_ROUTE, ADK_DRIVE],
-        "crash": [faults.maybe_crash, agent._after_tool, agent._before_tool],
+        "crash": [faults.maybe_crash, faults._die, agent._after_tool, agent._before_tool],
     },
     "temporal": {
         "request": [TEMPORAL_START, RefundWorkflow.run],
-        "decide": [INSTRUCTION, TEMPORAL_AGENT, fake_llm.FakeRefundLlm.generate_content_async],
+        "decide": [TEMPORAL_AGENT, fake_llm.FakeRefundLlm.generate_content_async],
         "approval": [agent.needs_manager_approval, RefundWorkflow._await_manager, RefundWorkflow.decide],
         "refund_payment": [tools.refund_payment, activities.refund_payment, TEMPORAL_AGENT, TOOL_OPTIONS],
         "record_refund": [tools.record_refund, activities.record_refund, TEMPORAL_AGENT],
@@ -76,7 +75,7 @@ SOURCES: dict[str, dict[str, list[Part]]] = {
         "runtime": [RefundWorkflow.run, worker.main],
         "persistence": [RefundWorkflow.run],
         "recovery": [worker.main],
-        "crash": [faults.maybe_crash, agent._after_tool, agent._before_tool],
+        "crash": [faults.maybe_crash, faults._die, agent._after_tool, agent._before_tool],
     },
 }
 

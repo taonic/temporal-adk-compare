@@ -12,7 +12,7 @@
     { "id": "sessions", "type": "database", "label": "ADK session DB", "sublabel": "SqliteSessionService", "pos": [690, 40], "size": [190, 64] },
     { "id": "adk-hosts", "type": "backend", "label": "ADK hosts A, B", "sublabel": "Runner, resumable App, agent.py", "pos": [690, 190], "size": [190, 64] },
     { "id": "workers", "type": "backend", "label": "Temporal Workers A, B", "sublabel": "RefundWorkflow, same agent.py", "pos": [690, 470], "size": [190, 64] },
-    { "id": "temporal", "type": "cloud", "label": "Temporal Service", "sublabel": "event history, timers, task queue", "pos": [690, 620], "size": [190, 64] },
+    { "id": "temporal", "type": "cloud", "label": "Temporal Server", "sublabel": "event history, timers, task queue", "pos": [690, 620], "size": [190, 64] },
     { "id": "business", "type": "external", "label": "Business systems", "sublabel": "payments, orders, email ledger", "pos": [1100, 330], "size": [200, 64], "tag": "Idempotency-Key aware" }
   ],
   "boundaries": [
@@ -42,7 +42,7 @@
     ] },
     { "dot": "emerald", "title": "Where progress is recorded", "items": [
       "ADK: session events, written by the host after each step",
-      "Temporal: event history, written by the Temporal Service when an Activity reports back",
+      "Temporal: event history, written by the Temporal Server when an Activity reports back",
       "Business systems: what really happened, the ground truth"
     ] }
   ]

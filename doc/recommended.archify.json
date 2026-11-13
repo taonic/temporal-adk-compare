@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Temporal + ADK: the recommended architecture",
+    "output": "doc/recommended.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "api",
+      "type": "external",
+      "label": "Business API",
+      "sublabel": "a refund request",
+      "pos": [
+        40,
+        60
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "workflow",
+      "type": "backend",
+      "label": "Temporal Workflow",
+      "sublabel": "approvals, timers, escalation, retries",
+      "pos": [
+        350,
+        60
+      ],
+      "size": [
+        230,
+        64
+      ],
+      "tag": "durable orchestration"
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "ADK agent loop",
+      "sublabel": "GoogleAdkPlugin, agent.py unchanged",
+      "pos": [
+        350,
+        210
+      ],
+      "size": [
+        230,
+        64
+      ]
+    },
+    {
+      "id": "model",
+      "type": "backend",
+      "label": "model call",
+      "sublabel": "an Activity",
+      "pos": [
+        270,
+        360
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "tool",
+      "type": "backend",
+      "label": "tool call",
+      "sublabel": "an Activity",
+      "pos": [
+        490,
+        360
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "cloud",
+      "label": "Model",
+      "sublabel": "Gemini or any LLM",
+      "pos": [
+        40,
+        360
+      ],
+      "size": [
+        160,
+        64
+      ]
+    },
+    {
+      "id": "business",
+      "type": "external",
+      "label": "Business systems",
+      "sublabel": "payments, CRM, DBs",
+      "pos": [
+        820,
+        360
+      ],
+      "size": [
+        190,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Temporal Worker: durable execution",
+      "wraps": [
+        "workflow",
+        "agent",
+        "model",
+        "tool"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "start",
+      "from": "api",
+      "to": "workflow",
+      "label": "start Workflow",
+      "variant": "emphasis"
+    },
+    {
+      "id": "runs-agent",
+      "from": "workflow",
+      "to": "agent",
+      "label": "runs the agent"
+    },
+    {
+      "id": "agent-model",
+      "from": "agent",
+      "to": "model",
+      "label": "reason"
+    },
+    {
+      "id": "agent-tool",
+      "from": "agent",
+      "to": "tool",
+      "label": "act"
+    },
+    {
+      "id": "model-llm",
+      "from": "model",
+      "to": "llm",
+      "label": "LLM API"
+    },
+    {
+      "id": "tool-business",
+      "from": "tool",
+      "to": "business",
+      "label": "HTTP + Idempotency-Key",
+      "variant": "emphasis"
+    },
+    {
+      "id": "escalate",
+      "from": "workflow",
+      "to": "business",
+      "label": "escalate (an Activity)",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Temporal owns the business process",
+      "items": [
+        "Approvals and deadlines as durable timers",
+        "Escalation when a deadline passes",
+        "Retries that survive a restart",
+        "Each result recorded once it completes"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "ADK owns the agent",
+      "items": [
+        "Reasoning and tool selection",
+        "The same agent.py as plain ADK",
+        "Tool confirmation for approvals"
+      ]
+    }
+  ]
+}

@@ -46,3 +46,31 @@ jobs:
       # What Fly runs: the front door that gives each visitor a Daytona sandbox of their own.
       - name: Build the front door image
         run: docker build -f frontdoor/Dockerfile -t temporal-adk-compare-frontdoor .
+
+  ui:
+    name: UI tests (the page in a browser, every scenario played through)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      TEMPORAL_CLI_VERSION: 1.8.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.0"
+
+      # The tests start a private copy of the demo, which starts its own Temporal dev server.
+      - name: Install the Temporal CLI
+        run: |
+          curl -sSfL "https://github.com/temporalio/cli/releases/download/v${TEMPORAL_CLI_VERSION}/temporal_cli_${TEMPORAL_CLI_VERSION}_linux_amd64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin temporal
+          temporal --version
+
+      - name: Install dependencies and a browser
+        run: |
+          uv sync --frozen --group e2e
+          uv run playwright install --with-deps chromium
+
+      - name: UI tests
+        run: uv run pytest tests/e2e/test_ui.py -v

@@ -20,6 +20,7 @@ import time
 import httpx
 
 from fastapi import FastAPI
+from google.adk.agents.run_config import RunConfig
 from google.adk.apps import App, ResumabilityConfig
 from google.adk.models import BaseLlm
 from google.adk.models.google_llm import Gemini
@@ -153,8 +154,11 @@ def create_app(name: str) -> FastAPI:
         background("approval answered: rejected (deadline passed)", user_id=user_id, session_id=session_id,
                    new_message=approval_answer(interrupt_id, False))
 
+    # Every event this host appends carries its name, so the page can say which host did each step.
+    stamp = RunConfig(custom_metadata={"host": f"host-{name}"})
+
     def background(label: str, **run_kwargs) -> None:
-        task = asyncio.create_task(drive(label, **run_kwargs))
+        task = asyncio.create_task(drive(label, run_config=stamp, **run_kwargs))
         tasks.add(task)
         task.add_done_callback(tasks.discard)
 
