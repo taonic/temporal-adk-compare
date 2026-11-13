@@ -46,6 +46,7 @@ class Demo:
         self.sessions: SqliteSessionService | None = None
         self.use_idempotency_key = False
         self.run: dict[str, Any] | None = None
+        self.request: RefundRequest | None = None  # the run on screen, to start on the other side later
         self.runs = 0
         self.events: list[tuple[float, str]] = []  # presenter-facing system log
         self.recovered: dict | None = None
@@ -131,10 +132,21 @@ class StartRun(BaseModel):
     reason: str = "item arrived damaged"
     approval: bool = False
     approval_deadline_seconds: int = 20
+    # "both" starts the two sides at once. "adk" or "temporal" starts one; the scenarios then
+    # start the same run on the other side with /api/runs/continue, so one column plays at a time.
+    side: str = "both"
+
+
+SIDES = ("adk", "temporal")
 
 
 @app.post("/api/runs")
 async def start_run(body: StartRun):
+    sides = SIDES if body.side == "both" else (body.side,)
+    if any(side not in SIDES for side in sides):
+        raise HTTPException(422, f"Unknown side {body.side!r}")
+    if "adk" in sides and _live_adk_host() is None:
+        raise HTTPException(409, "No ADK host is running")
     demo.runs += 1
     run_id = f"r{demo.runs:02d}-{secrets.token_hex(2)}"
     order_id = f"O-{7780 + demo.runs}"
@@ -145,24 +157,53 @@ async def start_run(body: StartRun):
                 "line_items": body.line_items,
                 "approval_threshold_cents": threshold, "deadline_seconds": body.approval_deadline_seconds,
                 "use_idempotency_key": demo.use_idempotency_key, "started_at": time.time(),
-                "workflow_id": f"refund-{run_id}"}
+                "started": {}, "workflow_id": f"refund-{run_id}"}
     demo.recovered = None
-    request = RefundRequest(run_id=run_id, customer_id=CUSTOMER, order_id=order_id,
-                            amount_cents=body.amount_cents, reason=body.reason, line_items=body.line_items,
-                            use_idempotency_key=demo.use_idempotency_key, approval_threshold_cents=threshold,
-                            approval_deadline_seconds=body.approval_deadline_seconds)
-    host = _live_adk_host()
-    if host is None:
-        raise HTTPException(409, "No ADK host is running")
-    adk_call = _post(f"{_host_url(host)}/runs", {**request.__dict__})
-    temporal_call = demo.client.start_workflow(
-        RefundWorkflow.run, request, id=demo.run["workflow_id"], task_queue=config.TASK_QUEUE,
-        task_timeout=timedelta(seconds=4))
-    await asyncio.gather(adk_call, temporal_call)
+    demo.request = RefundRequest(run_id=run_id, customer_id=CUSTOMER, order_id=order_id,
+                                 amount_cents=body.amount_cents, reason=body.reason, line_items=body.line_items,
+                                 use_idempotency_key=demo.use_idempotency_key, approval_threshold_cents=threshold,
+                                 approval_deadline_seconds=body.approval_deadline_seconds)
+    where = await asyncio.gather(*[_start_on(side) for side in sides])
     items = f" in {len(body.line_items)} line items" if body.line_items else ""
-    demo.note(f"Run {run_id}: refund ${body.amount_cents / 100:.2f}{items} for {order_id} started on both sides "
-              f"(ADK host {host.upper()}; Temporal task queue '{config.TASK_QUEUE}').")
+    demo.note(f"Run {run_id}: refund ${body.amount_cents / 100:.2f}{items} for {order_id} started "
+              f"{'on both sides' if len(sides) > 1 else 'on ' + sides[0].upper()} ({'; '.join(where)}).")
     return demo.run
+
+
+class ContinueRun(BaseModel):
+    side: str
+
+
+@app.post("/api/runs/continue")
+async def continue_run(body: ContinueRun):
+    """Start the run on screen on the side that has not run it yet: the same request, the same ids."""
+    if body.side not in SIDES:
+        raise HTTPException(422, f"Unknown side {body.side!r}")
+    if not demo.run or not demo.request:
+        raise HTTPException(409, "No run to continue")
+    if body.side in demo.run["started"]:
+        raise HTTPException(409, f"Run {demo.run['run_id']} already started on {body.side}")
+    where = await _start_on(body.side)
+    demo.note(f"Run {demo.run['run_id']}: the same refund started on {body.side.upper()} ({where}).")
+    return demo.run
+
+
+async def _start_on(side: str) -> str:
+    """Start the run on screen on one side; say where it went."""
+    request = demo.request
+    if side == "adk":
+        host = _live_adk_host()
+        if host is None:
+            raise HTTPException(409, "No ADK host is running")
+        await _post(f"{_host_url(host)}/runs", {**request.__dict__})
+        where = f"ADK host {host.upper()}"
+    else:
+        await demo.client.start_workflow(
+            RefundWorkflow.run, request, id=demo.run["workflow_id"], task_queue=config.TASK_QUEUE,
+            task_timeout=timedelta(seconds=4))
+        where = f"Temporal task queue '{config.TASK_QUEUE}'"
+    demo.run["started"][side] = time.time()
+    return where
 
 
 class Settings(BaseModel):
@@ -277,6 +318,12 @@ async def approve(body: Decision):
 @app.post("/api/reset")
 async def reset():
     """A clean stage: one host and one Worker, nothing armed, empty ledger."""
+    # The previous run's Workflow stops too, so it can't go on moving money after the reset.
+    if demo.run and "temporal" in demo.run["started"]:
+        try:
+            await demo.client.get_workflow_handle(demo.run["workflow_id"]).terminate("demo reset")
+        except RPCError:
+            pass  # already closed
     for key in ("adk-b", "worker-b"):
         await demo.supervisor.stop(key)
     for key in ("business", "adk-a", "worker-a"):
@@ -289,7 +336,7 @@ async def reset():
     faults.end_model_outage()
     demo.supervisor.auto_restart = True
     demo.use_idempotency_key = False
-    demo.run, demo.recovered = None, None
+    demo.run, demo.request, demo.recovered = None, None, None
     async with httpx.AsyncClient(timeout=5) as client:
         await client.post(f"{config.BUSINESS_URL}/reset")
     for proc in demo.supervisor.processes.values():
@@ -400,9 +447,10 @@ async def _business_state() -> dict:
             rows = (await client.get(f"{config.BUSINESS_URL}/state")).json()
     except httpx.HTTPError:
         return {"error": "business systems unreachable"}
-    if demo.run:
-        rows = {table: [r for r in items if r["run_id"] == demo.run["run_id"]] for table, items in rows.items()}
-    return rows
+    # Only the run on screen. With none (after a reset, or a restart of this API: the ledger is a
+    # file that outlives both), nothing: earlier runs' rows must not show up as this run's.
+    run_id = demo.run["run_id"] if demo.run else None
+    return {table: [r for r in items if r["run_id"] == run_id] for table, items in rows.items()}
 
 
 async def _adk_state() -> dict:
@@ -455,7 +503,7 @@ def _adk_event(i: int, event) -> dict:
 
 
 async def _temporal_state() -> dict:
-    if not demo.run:
+    if not demo.run or "temporal" not in demo.run["started"]:
         return {}
     workflow_id = demo.run["workflow_id"]
     handle = demo.client.get_workflow_handle(workflow_id)

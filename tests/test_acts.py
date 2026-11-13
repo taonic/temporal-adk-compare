@@ -60,21 +60,21 @@ def test_act4_crash_inside_tool_needs_idempotency_on_both(api, use_key):
 
 
 def test_act1_nobody_resumes_adk(api):
-    """A second ADK host sits idle next to the unfinished invocation; a second Worker just continues."""
+    """A second ADK host sits idle next to the unfinished invocation; a second Worker just continues.
+
+    Played as the act plays it: the run starts on ADK alone, then the same run on Temporal.
+    """
     api.post("/api/settings", {"auto_restart": False})
     api.post("/api/processes/adk-b/start")
     api.post("/api/processes/worker-b/start")
     api.post("/api/faults", {"side": "both", "point": "before_notify"})
-    api.post("/api/runs", {})
+    run = api.post("/api/runs", {"side": "adk"})
+    assert list(run["started"]) == ["adk"]
 
-    state = api.wait(TEMPORAL_DONE, what="Worker B to finish the refund")
-    assert proc_state(state, "worker-a") == "crashed" or proc_state(state, "worker-b") == "crashed"
-    assert table(state, "notifications", "temporal") == 1
-    assert refunds(state, "temporal") == 1
-
+    api.wait(lambda s: proc_state(s, "adk-a") == "crashed", what="ADK host A to crash")
     time.sleep(3)
     state = api.state()
-    assert proc_state(state, "adk-a") == "crashed"
+    assert state["temporal"] == {}, "Temporal has not started this run yet"
     assert proc_state(state, "adk-b") == "running"
     assert state["adk"]["status"] == "unfinished", "nothing in ADK picked the invocation up"
     assert table(state, "notifications", "adk") == 0
@@ -83,6 +83,13 @@ def test_act1_nobody_resumes_adk(api):
     state = api.wait(ADK_DONE, what="ADK resume on host B")
     assert table(state, "notifications", "adk") == 1
     assert refunds(state, "adk") == 1, "resuming after a crash before notify does not repeat the refund"
+
+    run = api.post("/api/runs/continue", {"side": "temporal"})
+    assert run["run_id"] == state["run"]["run_id"] and set(run["started"]) == {"adk", "temporal"}
+    state = api.wait(TEMPORAL_DONE, what="the other Worker to finish the refund")
+    assert proc_state(state, "worker-a") == "crashed" or proc_state(state, "worker-b") == "crashed"
+    assert table(state, "notifications", "temporal") == 1
+    assert refunds(state, "temporal") == 1
 
 
 def test_act3_in_memory_timer_fires_while_the_host_lives(api):

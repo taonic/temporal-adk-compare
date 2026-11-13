@@ -5,40 +5,47 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Resumable vs durable agent</title>
 <style>
+  /* The Temporal course theme (temporal-agent-governance-workshop), token for token: ultraviolet
+     for Temporal and the player, slate neutrals, green / amber / orange for outcomes. ADK is cyan, a hue well away from Temporal's. */
   :root {
-    --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #5d6677; --border: #dde1e8;
-    --accent: #3b5bdb; --accent-text: #ffffff; --code-bg: #f1f3f6;
-    --ok: #2b8a3e; --ok-bg: #e6f4ea; --warn: #b35c00; --warn-bg: #fff3e0;
-    --bad: #c92a2a; --bad-bg: #fdecec; --info: #1c63b7; --info-bg: #e7f0fb; --idle: #6b7280; --idle-bg: #eef0f3;
-    --adk: #1a73e8; --tmp: #7048e8;
-    --t-kw: #a626a4; --t-str: #2b8a3e; --t-num: #b35c00; --t-com: #8a93a3; --t-def: #1c63b7; --t-deco: #b35c00; --t-bi: #0c7d9d;
+    --bg: #f8fafc; --panel: #ffffff; --surface: #ffffff; --mist: #eef2f7; --text: #141414; --muted: #626b7a; --faint: #8992a3;
+    --border: #d8dee8; --border-strong: #b9c2d0;
+    --accent: #444ce7; --accent-strong: #3037c9; --accent-soft: #eef0ff; --accent-text: #ffffff; --code-bg: #eef2f7;
+    --ok: #0f8b68; --ok-bg: #dff7ef; --warn: #c77700; --warn-bg: #fff3d6;
+    --bad: #c2410c; --bad-bg: #fde9dd; --info: #444ce7; --info-bg: #eef0ff; --idle: #8992a3; --idle-bg: #eef2f7;
+    --adk: #0e7490; --tmp: #444ce7;
+    --t-kw: #a626a4; --t-str: #0f8b68; --t-num: #c77700; --t-com: #8992a3; --t-def: #3037c9; --t-deco: #c77700; --t-bi: #0c7d9d;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #12151b; --panel: #1b1f27; --text: #e4e7ec; --muted: #9aa3b2; --border: #2c323d;
-      --accent: #7c93f2; --accent-text: #0e1220; --code-bg: #232833;
-      --ok: #69db7c; --ok-bg: #1d3324; --warn: #ffb35c; --warn-bg: #3a2a16;
-      --bad: #ff8787; --bad-bg: #3b1d1d; --info: #74b0f5; --info-bg: #182a40; --idle: #9aa3b2; --idle-bg: #262b35;
-      --adk: #74a9f7; --tmp: #b197fc;
-      --t-kw: #d38bd2; --t-str: #8fd19e; --t-num: #ffb35c; --t-com: #7d8696; --t-def: #74b0f5; --t-deco: #ffb35c; --t-bi: #66d9e8;
+      --bg: #0f1115; --panel: #16181d; --surface: #1b1e25; --mist: #1c1f26; --text: #e7ebf2; --muted: #9aa3b2; --faint: #6b7382;
+      --border: #2a2e37; --border-strong: #3a3f4b;
+      --accent: #818cf8; --accent-strong: #6366f1; --accent-soft: #20243a; --accent-text: #ffffff; --code-bg: #1c1f26;
+      --ok: #34d399; --ok-bg: #10231c; --warn: #fbbf24; --warn-bg: #2a2310;
+      --bad: #fb923c; --bad-bg: #2d1a10; --info: #818cf8; --info-bg: #20243a; --idle: #6b7382; --idle-bg: #1c1f26;
+      --adk: #22d3ee; --tmp: #818cf8;
+      --t-kw: #d38bd2; --t-str: #34d399; --t-num: #fbbf24; --t-com: #6b7382; --t-def: #818cf8; --t-deco: #fbbf24; --t-bi: #66d9e8;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #12151b; --panel: #1b1f27; --text: #e4e7ec; --muted: #9aa3b2; --border: #2c323d;
-    --accent: #7c93f2; --accent-text: #0e1220; --code-bg: #232833;
-    --ok: #69db7c; --ok-bg: #1d3324; --warn: #ffb35c; --warn-bg: #3a2a16;
-    --bad: #ff8787; --bad-bg: #3b1d1d; --info: #74b0f5; --info-bg: #182a40; --idle: #9aa3b2; --idle-bg: #262b35;
-    --adk: #74a9f7; --tmp: #b197fc;
-    --t-kw: #d38bd2; --t-str: #8fd19e; --t-num: #ffb35c; --t-com: #7d8696; --t-def: #74b0f5; --t-deco: #ffb35c; --t-bi: #66d9e8;
+    --bg: #0f1115; --panel: #16181d; --surface: #1b1e25; --mist: #1c1f26; --text: #e7ebf2; --muted: #9aa3b2; --faint: #6b7382;
+    --border: #2a2e37; --border-strong: #3a3f4b;
+    --accent: #818cf8; --accent-strong: #6366f1; --accent-soft: #20243a; --accent-text: #ffffff; --code-bg: #1c1f26;
+    --ok: #34d399; --ok-bg: #10231c; --warn: #fbbf24; --warn-bg: #2a2310;
+    --bad: #fb923c; --bad-bg: #2d1a10; --info: #818cf8; --info-bg: #20243a; --idle: #6b7382; --idle-bg: #1c1f26;
+    --adk: #22d3ee; --tmp: #818cf8;
+    --t-kw: #d38bd2; --t-str: #34d399; --t-num: #fbbf24; --t-com: #6b7382; --t-def: #818cf8; --t-deco: #fbbf24; --t-bi: #66d9e8;
   }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
   code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   a { color: var(--accent); }
   button { font: inherit; border-radius: 6px; border: 1px solid var(--border); background: var(--panel); color: var(--text);
            padding: 5px 11px; cursor: pointer; }
   button:hover { border-color: var(--accent); }
-  button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+  /* One call to action on the page: the player's Next. A button in the columns that matters right
+     now is outlined in the outcome colour, never filled. */
+  button.attention { border-color: var(--bad); color: var(--bad); font-weight: 600; }
   button.danger { color: var(--bad); }
   button.small { padding: 2px 8px; font-size: 12px; }
   button:disabled { opacity: .45; cursor: default; }
@@ -56,7 +63,9 @@
            justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid var(--border);
            background: linear-gradient(110deg, color-mix(in srgb, var(--adk) 12%, var(--panel)) 0%, var(--panel) 50%,
                        color-mix(in srgb, var(--tmp) 12%, var(--panel)) 100%); }
-  header .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  /* The subtitle wraps in its own space; the controls stay on the right, on the same row. */
+  header .brand { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1 1 420px; }
+  header .controls { flex: none; }
   header .logo { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
                  background: linear-gradient(135deg, var(--adk), var(--tmp)); color: #fff; }
   header h1 { font-size: 17px; margin: 0; letter-spacing: -.01em; }
@@ -87,38 +96,133 @@
   h2 { font-size: 15px; margin: 0; }
   h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 0 0 6px; }
 
-  /* ADK vs Temporal claim cards, one pair per act */
-  .claim { --v: var(--warn); --vbg: var(--warn-bg); display: grid; gap: 6px; align-content: start; padding: 12px 16px 12px;
-           border-radius: 10px; border: 1px solid color-mix(in srgb, var(--v) 45%, var(--border)); border-left: 5px solid var(--v);
-           background: color-mix(in srgb, var(--vbg) 55%, var(--panel)); }
-  .claim.good { --v: var(--ok); --vbg: var(--ok-bg); }
-  .claim .tag { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--c); }
-  .claim.adk { --c: var(--adk); } .claim.temporal { --c: var(--tmp); }
-  .claim p { margin: 0; font-size: 16px; line-height: 1.45; font-weight: 500; }
-  .claim mark { background: color-mix(in srgb, var(--v) 22%, transparent); color: inherit; font-weight: 700;
-                padding: 0 3px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
-  .claim .src { font-size: 12px; color: var(--muted); }
-  .claim code { background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
-  /* The same comparison, per act, inside the player. */
-  .act-compare { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  @media (max-width: 1100px) { .act-compare { grid-template-columns: 1fr; } }
-  .claim.compact { padding: 7px 12px 8px; gap: 2px; border-left-width: 4px; }
-  .claim.compact .tag { font-size: 10.5px; }
-  .claim.compact p { font-size: 13.5px; font-weight: 400; }
-  .claim.compact mark { font-weight: 600; }
-  @media (max-width: 700px) { .claim p { font-size: 15px; } }
 
-  /* Scenario player */
-  .player { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px 18px; align-items: start;
-            border-left: 4px solid var(--accent); }
-  .acts { display: flex; flex-wrap: wrap; gap: 4px; grid-column: 1 / -1; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
-  .acts button { border-color: transparent; background: none; color: var(--muted); padding: 3px 10px; font-size: 13px; }
-  .acts button:hover { color: var(--text); border-color: var(--border); }
-  .acts button[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-  .step-title { font-size: 16px; font-weight: 700; margin: 0 0 6px; }
-  .caption { font-size: 14px; max-width: 110ch; }
+  /* Scenario player: a guide's conversation, as in the Temporal course. One message per step, typed
+     out with a caret; the replies (Back, Next) follow the message; earlier steps fold into a trail. */
+  .player { display: flex; flex-direction: column; padding: 0; overflow: hidden; border-top: 4px solid var(--faint); }
+  .pane-head { flex: none; display: grid; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .acts { display: flex; flex-wrap: wrap; gap: 4px; }
+  .acts button { border-color: transparent; background: none; color: var(--muted); padding: 3px 10px; font-size: 13px; border-radius: 999px; font-weight: 600; }
+  .acts button:hover { color: var(--accent); border-color: var(--border-strong); }
+  /* The scenario you're on: tinted, not filled, so Next stays the only filled button. */
+  .acts button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+  .acts .short, .acts .tabs-label { display: none; }
+  .acts .tabs-label { align-self: center; margin-right: 2px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
+                      text-transform: uppercase; color: var(--muted); }
+  .segs { display: flex; align-items: center; gap: 4px; }
+  .segs i { flex: 1; height: 5px; border-radius: 999px; background: var(--mist); box-shadow: inset 0 0 0 1px var(--border); }
+  .segs i.filled { background: var(--accent); box-shadow: none; }
+  .segs i.current { background: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .segs .count { flex: none; margin-left: 6px; font-size: 11.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .thread { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px 18px; background: var(--bg); min-width: 0; }
+  /* The steps you've been through, folded. */
+  .trail { font-size: 12px; color: var(--muted); }
+  .trail summary { display: flex; align-items: center; gap: 8px; width: fit-content; max-width: 100%; padding: 3px 10px;
+                   border: 1px solid var(--border); border-radius: 999px; background: var(--panel); cursor: pointer; list-style: none; }
+  .trail summary::-webkit-details-marker { display: none; }
+  .trail summary:hover { border-color: var(--accent); color: var(--accent); }
+  .trail .count { flex: none; font-weight: 800; }
+  .trail .last { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .trail[open] .last { display: none; }
+  .trail ol { margin: 8px 0 0; padding: 0 0 0 4px; list-style: none; }
+  .trail-item { display: flex; align-items: baseline; gap: 8px; width: 100%; padding: 3px 6px; border: 0; border-radius: 6px;
+                background: none; color: var(--muted); text-align: left; font-size: 12px; }
+  .trail-item:hover { background: var(--mist); color: var(--text); }
+  .trail-item .mark { flex: none; width: 14px; color: var(--ok); font-weight: 800; }
+  .trail-item .tag { flex: none; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+  .trail-item .tag.adk { color: var(--adk); } .trail-item .tag.temporal { color: var(--tmp); }
+
+  /* The guide's message. */
+  .guide-msg { display: flex; align-items: flex-start; gap: 10px; animation: guide-in 220ms ease-out; }
+  @keyframes guide-in { from { opacity: 0; transform: translateY(6px); } }
+  .guide-avatar { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; margin-top: 2px; border-radius: 8px;
+                  background: linear-gradient(135deg, var(--accent), #a855f7); color: #fff; font-size: 14px;
+                  box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .guide-msg.adk .guide-avatar { background: linear-gradient(135deg, var(--adk), #155e75); box-shadow: 0 4px 14px color-mix(in srgb, var(--adk) 30%, transparent); }
+  .guide-bubble { flex: 1 1 auto; min-width: 0; padding: 12px 16px 14px; border: 1px solid var(--border); border-radius: 4px 14px 14px 14px;
+                  background: var(--panel); line-height: 1.6; }
+  .guide-bubble.is-streaming { cursor: pointer; }
+  .guide-kicker { margin: 0; color: var(--accent); font-size: 10.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+  .guide-msg.adk .guide-kicker { color: var(--adk); } .guide-msg.temporal .guide-kicker { color: var(--tmp); }
+  .guide-title { margin: 2px 0 8px; font-size: 16px; line-height: 1.25; }
+  .caption { font-size: 13.5px; }
   .caption code { background: var(--code-bg); padding: 0 4px; border-radius: 4px; }
-  /* Wrap-up: the four results in one table, amber for ADK and green for Temporal, like the cards. */
+  .caption .proves { margin-top: 8px; font-size: 12px; color: var(--muted); }
+  /* "Read the code" links in a caption: the code itself opens in the dialog. */
+  /* In a sentence: an ordinary link. */
+  .caption a[data-code] { color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline;
+                          text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 3px; }
+  .caption a[data-code]:hover { text-decoration-color: var(--accent); }
+  /* "Read the code:" under a paragraph: small pills, each opening the code. */
+  .caption .code-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--muted); }
+  .caption .code-links a { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border: 1px solid var(--border-strong);
+                                      border-radius: 999px; background: var(--panel); text-decoration: none; white-space: nowrap; }
+  .caption .code-links a[data-code]::after { content: "›"; font-weight: 700; }
+  /* A docs link can be long: it wraps inside the bubble rather than running past it. */
+  .caption .code-links a.doc { color: var(--accent); font-weight: 600; white-space: normal; max-width: 100%; border-radius: 10px; }
+  .caption .code-links a:hover { border-color: var(--accent); background: var(--accent-soft); }
+  /* The scenario's claims, in its opening message: ADK amber, Temporal green, as the outcomes are.
+     Each highlight sweeps in as the typing reaches it (an element starts its animation when it
+     stops being display: none, which is when the typing shows it). */
+  .thesis { display: grid; gap: 10px; margin: 10px 0 2px; }
+  .thesis-line { --v: var(--warn); padding: 2px 0 2px 11px; border-left: 3px solid var(--v); }
+  .thesis-line.temporal { --v: var(--ok); }
+  .thesis-line .who { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+  .thesis-line.adk .who { color: var(--adk); } .thesis-line.temporal .who { color: var(--tmp); }
+  .thesis-line p { margin: 1px 0 0; }
+  .thesis-line .src { margin-top: 2px; font-size: 11.5px; color: var(--muted); }
+  .thesis mark, .pins mark { color: inherit; font-weight: 700; padding: 0 3px; border-radius: 3px;
+                 box-decoration-break: clone; -webkit-box-decoration-break: clone;
+                 background: linear-gradient(color-mix(in srgb, var(--v) 26%, transparent), color-mix(in srgb, var(--v) 26%, transparent))
+                             no-repeat 0 0 / 0% 100%;
+                 animation: mark-sweep .9s cubic-bezier(.3, .7, .3, 1) .1s forwards; }
+  @keyframes mark-sweep { to { background-size: 100% 100%; } }
+  /* The claims, pinned under the pane's head for the whole scenario: the highlighted phrase per
+     runtime, the playing side's at full strength (its highlight sweeps in again on its turn).
+     A click opens the full claims. */
+  .pin-slot:empty { display: none; }
+  .pins { display: grid; gap: 4px; padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+          cursor: pointer; font-size: 12.5px; line-height: 1.45; }
+  .pins:hover { border-color: var(--border-strong); }
+  .pins .thesis-line { transition: opacity .3s; }
+  .pins .thesis-line .who { display: inline; margin-right: 6px; font-size: 10px; }
+  .pins .thesis-line p { display: inline; margin: 0; }
+  .pins.open .thesis-line .who { display: block; }
+  .pins.open .thesis-line p { display: block; }
+  .pins.open { gap: 8px; }
+  .pins .thesis-line.off { opacity: .45; }
+  .pins .thesis-line:not(.on) mark { animation: none; background-size: 100% 100%; }
+  .pins .toggle-full { justify-self: end; font-size: 11px; color: var(--muted); }
+  .pins:hover .toggle-full { color: var(--accent); }
+  .waiting { display: flex; align-items: center; gap: 8px; padding-left: 38px; font-size: 12px; color: var(--warn); }
+  .waiting::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: wait-pulse 1.2s ease-in-out infinite; }
+  @keyframes wait-pulse { 50% { opacity: .25; } }
+  /* Quick replies: under the message, Back alone on the left, the primary one rightmost. */
+  .replies { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding-left: 38px;
+             animation: guide-in 220ms ease-out; }
+  .replies[hidden] { display: none; }
+  .reply { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 5px 13px; border: 1px solid var(--border-strong);
+           border-radius: 999px; background: var(--panel); color: var(--text); font-size: 12.5px; font-weight: 750; line-height: 1.25; }
+  .reply:hover { border-color: var(--accent); color: var(--accent); }
+  .reply.is-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+  .reply.is-primary:hover { border-color: var(--accent-strong); background: var(--accent-strong); color: #fff; }
+  /* Waiting for the step's outcome: plainly not for pressing. */
+  .reply:disabled, .reply:disabled:hover { opacity: 1; border-color: var(--border-strong); background: var(--panel); color: var(--muted); cursor: wait; }
+  .reply.is-quiet { border-color: transparent; background: none; color: var(--muted); }
+  .reply.is-quiet:hover { color: var(--accent); }
+  .reply.is-back { margin-right: auto; }
+  .reply[aria-pressed="true"] { color: var(--accent); }
+  /* The message typing in (from the course's streaming.js). */
+  .stream-hidden { display: none !important; }
+  .stream-caret { display: inline-block; width: .5em; height: 1em; margin-left: 2px; vertical-align: -.12em; border-radius: 2px;
+                  background: var(--accent); animation: caret-blink .9s steps(1) infinite; }
+  @keyframes caret-blink { 50% { opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) {
+    .stream-caret, .waiting::before, .guide-msg, .replies { animation: none; }
+    .thesis mark, .pins mark { animation: none; background-size: 100% 100%; }
+  }
+
   .caption table.wrap-table { margin: 10px 0 4px; font-size: 13.5px; border-collapse: separate; border-spacing: 0 4px; }
   .wrap-table th, .wrap-table td { border: 0; padding: 7px 10px; vertical-align: top; line-height: 1.4; }
   .wrap-table tr > th:first-child { color: var(--text); font-size: 13px; white-space: nowrap; width: 1%; }
@@ -136,24 +240,38 @@
   .caption .wrap-list { margin: 10px 0 0; padding-left: 22px; display: grid; gap: 8px; }
   .caption .wrap-list span { margin-left: 6px; font-size: 11.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
   .caption .wrap-close { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--info-bg); }
-  /* Content-only acts (the wrap-up): no runtime columns, no ledger, a full-width caption. */
+  /* Content-only scenarios (the wrap-up): no runtime columns, no ledger, a full-width caption. */
   body.content-only .legend, body.content-only .sides, body.content-only #business { display: none; }
-  body.content-only .caption { max-width: none; }
-  /* Under the caption: Next first, then back, progress and autoplay. */
-  .player .nav { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
-  .player .nav > .primary { min-width: 160px; }
-  .player .nav-row { display: flex; gap: 8px; align-items: center; }
-  .player .progress { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .player .waiting { font-size: 12px; color: var(--warn); margin-top: 6px; }
-  .player .proves { font-size: 12px; color: var(--muted); margin-top: 8px; }
-  @media (max-width: 700px) { .player { grid-template-columns: 1fr; } }
+  .stage { display: grid; gap: 14px; min-width: 0; container: stage / inline-size; }
+
+  /* Wide screens: the player docks on the right, full height, like the course's guide pane. */
+  @media (min-width: 1200px) {
+    body:not(.content-only) .wrap { grid-template-columns: minmax(0, 1fr) var(--pane-w); align-items: start;
+                                    --pane-w: clamp(340px, 25vw, 440px); }
+    body:not(.content-only) .stage { grid-column: 1; grid-row: 1; }
+    body:not(.content-only) .player { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--header-h, 58px) + 14px);
+      height: calc(100vh - var(--header-h, 58px) - 28px); }
+    body:not(.content-only) .acts .long { display: none; }
+    body:not(.content-only) .acts .short, body:not(.content-only) .acts .tabs-label { display: inline; }
+    body:not(.content-only) .acts button { min-width: 32px; }
+    body:not(.content-only) .thread { flex: 1; overflow-y: auto; overscroll-behavior: contain; position: relative; }
+  }
 
   /* Two columns */
   .sides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-  @media (max-width: 1100px) { .sides { grid-template-columns: 1fr; } }
-  .side { border-top: 4px solid var(--c); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-content: start; }
+  @container stage (max-width: 900px) { .sides { grid-template-columns: 1fr; } }
+  /* Both columns share one set of rows (title, processes, flow, log), so a taller part on one
+     side pushes the other side's down too and the steps stay level. */
+  .side { border-top: 4px solid var(--c); display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
+          grid-row: span 4; grid-template-rows: subgrid; }
   .side.adk { --c: var(--adk); }
   .side.temporal { --c: var(--tmp); }
+  /* One column plays at a time: the other rests until its turn. */
+  .side { transition: opacity .35s, filter .35s; }
+  .side.resting { opacity: .5; filter: saturate(.6); }
+  .side.resting:hover, .side.resting:focus-within { opacity: .85; filter: none; }
+  .side.playing { box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 45%, transparent); }
+  @media (prefers-reduced-motion: reduce) { .side { transition: none; } }
   .side-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; align-items: start; }
   .side-head h2 { color: var(--c); }
   .side-head .stack { font-size: 11.5px; color: var(--muted); }
@@ -167,8 +285,17 @@
   .proc.running .state { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-bg); }
   .proc.crashed .state, .proc.restarting .state { background: var(--bad); box-shadow: 0 0 0 3px var(--bad-bg); }
   .proc.crashed { border-color: var(--bad); }
-  .side-body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
-  @media (max-width: 640px) { .side-body { grid-template-columns: 1fr; } }
+  /* The body is a size container, not the column: containment on the column would cancel its subgrid. */
+  .side-body { container: sidebody / inline-size; min-width: 0; }
+  .side-body > .body { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 12px; }
+  /* A narrow column (the player docked beside it): the flow gets the full width so its labels stay
+     readable, and the panels sit two-up underneath it. */
+  @container sidebody (max-width: 590px) {
+    .side-body > .body { grid-template-columns: minmax(0, 1fr); }
+    .side-body .flow { max-width: 470px; }
+    .side-body .panels { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  }
+  @container sidebody (max-width: 400px) { .side-body .panels { grid-template-columns: minmax(0, 1fr); } }
 
   /* Flow diagram */
   .flow svg { display: block; width: 100%; height: auto; }
@@ -200,7 +327,7 @@
   .flow .bolt rect { fill: var(--bad-bg); stroke: var(--bad); stroke-dasharray: 3 2; }
   @keyframes pulse { 50% { stroke-width: 2.6; } }
   @media (prefers-reduced-motion: reduce) { .flow .node.active rect.box { animation: none; } }
-  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); padding: 0 4px; margin-bottom: -4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--muted); padding: 0 4px; margin-top: -4px; }
   .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; border: 1.5px solid; }
 
   /* Right-hand panels */
@@ -219,7 +346,7 @@
   .panel.weak.hurting .line.strong { font-weight: 600; }
   .panel.weak .line.twice { color: var(--bad); }
   .panel .big { font-weight: 700; font-size: 13.5px; }
-  .panel-head { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+  .panel-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 6px; align-items: baseline; }
   .panel-head .muted { font-size: 11px; white-space: nowrap; }
   .panel .line { font-size: 12px; margin-top: 4px; }
   .records { max-height: 260px; overflow: auto; font-size: 11.5px; margin-top: 2px; }
@@ -245,7 +372,7 @@
   /* Business systems */
   .biz-grid { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 10px; }
   .biz-grid.no-esc { grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr)); }
-  @media (max-width: 1100px) { .biz-grid { grid-template-columns: 1fr 1fr; } }
+  @container stage (max-width: 1000px) { .biz-grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 640px) { .biz-grid { grid-template-columns: 1fr; } }
   .totals { display: flex; flex-wrap: wrap; gap: 8px; }
   .total { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); font-size: 13px; }
@@ -272,6 +399,14 @@
   .part { margin-bottom: 14px; }
   .part-title { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; margin-bottom: 4px; }
   pre.code { background: var(--code-bg); padding: 10px; border-radius: 6px; overflow-x: auto; margin: 0; line-height: 1.45; }
+  pre.code .cl { display: block; }
+  pre.code .cl.hl { margin: 0 -10px; padding: 0 10px; background: color-mix(in srgb, var(--warn) 16%, transparent);
+                    box-shadow: inset 3px 0 0 var(--warn); }
+  pre.code mark.code-hl { background: color-mix(in srgb, var(--warn) 38%, transparent); color: inherit; font-weight: 700;
+                          border-radius: 3px; padding: 0 1px; }
+  .what .doc-link { display: block; margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .what mark { background: color-mix(in srgb, var(--warn) 30%, transparent); color: inherit; font-weight: 700;
+               padding: 0 3px; border-radius: 3px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .95em; }
   pre.code .ln { display: inline-block; width: 3.2em; color: var(--muted); user-select: none; opacity: .6; }
   .t-kw { color: var(--t-kw); } .t-str { color: var(--t-str); } .t-num { color: var(--t-num); }
   .t-com { color: var(--t-com); font-style: italic; } .t-def { color: var(--t-def); font-weight: 600; }
@@ -288,25 +423,27 @@
     </div>
     <div>
       <h1>Resumable agent vs durable agent</h1>
-      <div class="sub">One ADK agent, the same crashes, two runtimes. Every process is real and every crash is a real <code>kill -9</code>.</div>
+      <div class="sub">A technical deep dive into agent resiliency: session-based resumability (ADK) vs event-sourced durable execution (Temporal). One agent, real processes, real <code>kill -9</code> crashes.</div>
     </div>
   </div>
   <div class="controls" id="controls"></div>
 </header>
 
 <div class="wrap">
-  <section class="card player" id="player" aria-live="polite"></section>
+  <section class="card player" id="player" aria-label="Scenario player"></section>
+  <main class="stage">
+  <div class="sides">
+    <section class="card side adk" id="side-adk"></section>
+    <section class="card side temporal" id="side-temporal"></section>
+  </div>
   <div class="legend" aria-label="Legend">
     <span><i style="border-color:var(--ok);background:var(--ok-bg)"></i>done · result recorded</span>
     <span><i style="border-color:var(--warn);background:var(--warn-bg);border-style:dashed"></i>side effect done, result not recorded</span>
     <span><i style="border-color:var(--bad);background:var(--bad-bg)"></i>side effect repeated</span>
     <span>Click any step for its code and what was persisted</span>
   </div>
-  <div class="sides">
-    <section class="card side adk" id="side-adk"></section>
-    <section class="card side temporal" id="side-temporal"></section>
-  </div>
   <section class="card" id="business"></section>
+  </main>
 </div>
 
 <dialog id="node-dialog" aria-labelledby="node-title"><div class="inner"></div></dialog>
@@ -363,7 +500,7 @@ const store = {
 let state = null;
 let scenarios = [];
 let actIndex = Number(store.get("act") || 0);
-let stepIndex = -1;            // -1 = act not started yet
+let stepIndex = -1;            // -1 = scenario not started yet
 let autoplay = false;
 let busy = false;
 let stepMark = {};             // snapshot when the current step started, for waitFor predicates
@@ -393,7 +530,8 @@ function expected(name) {
 
 // ---- Deriving each side's picture from the raw records ----------------------
 function businessOps(side) {
-  const b = state.business || {};
+  // A side that hasn't started the run on screen has no side effects in it.
+  const b = sideRun(side) ? state.business || {} : {};
   const mine = (rows) => (rows || []).filter((r) => r.side === side);
   const refunds = mine(b.refunds);
   return {
@@ -456,14 +594,22 @@ function temporalPicture() {
 
 function picture(side) { return side === "adk" ? adkPicture() : temporalPicture(); }
 
+// The run on screen, if it has started on this side. The scenarios start one side, then the other.
+function sideRun(side) {
+  const run = state.run;
+  return run && (!run.started || run.started[side]) ? run : null;
+}
+
 function nodeStates(side) {
   const p = picture(side);
   const ops = businessOps(side);
-  const run = state.run;
-  const hasApproval = run && run.approval_threshold_cents != null;
+  const run = sideRun(side);
+  // The policy belongs to the run, so a side that has not started yet shows it too.
+  const hasApproval = state.run && state.run.approval_threshold_cents != null;
   const out = {};
   const items = run && run.line_items && run.line_items.length ? ` in ${run.line_items.length} line items` : "";
-  out.request = run ? { cls: "done", sub: `Refund ${run.order_id} · ${money(run.amount_cents)}${items}` } : { cls: "", sub: "no run yet" };
+  out.request = run ? { cls: "done", sub: `Refund ${run.order_id} · ${money(run.amount_cents)}${items}` }
+    : { cls: "", sub: state.run ? `${state.run.order_id} not started on this side yet` : "no run yet" };
   if (!run) out.decide = { cls: "" };
   else if (p.decided) out.decide = { cls: "done", sub: items ? `decided: ${run.line_items.length} refunds in one turn` : "decided: refund" };
   else if (p.modelRetry) out.decide = { cls: "active", sub: side === "adk"
@@ -550,25 +696,38 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 function currentAct() { return scenarios[actIndex]; }
 function currentStep() { const a = currentAct(); return a && stepIndex >= 0 ? a.steps[stepIndex] : null; }
 
+// What a step waits for. Each also counts as met once that side's run has finished: a run that got
+// ahead of the script (resumed by hand, say) can't reach a middle state again, and must not hold
+// the player forever.
+const adkFinished = (st) => Boolean(st.adk && st.adk.status === "completed");
+const temporalFinished = (st) => Boolean(st.temporal && st.temporal.status && st.temporal.status !== "RUNNING");
 const PREDICATES = {
-  temporal_done: (st) => st.temporal && st.temporal.status === "COMPLETED",
-  adk_done: (st) => st.adk && st.adk.status === "completed",
+  temporal_done: (st) => temporalFinished(st),
+  adk_done: (st) => adkFinished(st),
   adk_unfinished: (st) => {
     const a = st.processes.find((p) => p.key === "adk-a");
-    return st.adk && st.adk.status === "unfinished" && a.state === "running" && a.restarts > (stepMark.adkRestarts ?? 0);
+    return adkFinished(st)
+      || (st.adk && st.adk.status === "unfinished" && a.state === "running" && a.restarts > (stepMark.adkRestarts ?? 0));
   },
-  both_awaiting: (st) => st.adk && st.adk.status === "awaiting_approval" && st.temporal && st.temporal.awaiting,
-  deadline_passed: (st) => st.adk && st.adk.awaiting && st.now > st.adk.awaiting.deadline_at + 1,
-  adk_stopped: (st) => st.adk && st.adk.status === "unfinished" && !adkHostBusy(),
+  adk_awaiting: (st) => adkFinished(st) || (st.adk && st.adk.status === "awaiting_approval"),
+  temporal_awaiting: (st) => temporalFinished(st) || Boolean(st.temporal && st.temporal.awaiting),
+  deadline_passed: (st) => adkFinished(st) || (st.adk && st.adk.awaiting && st.now > st.adk.awaiting.deadline_at + 1),
+  temporal_timer_fired: (st) => temporalFinished(st) || Boolean(st.temporal && (st.temporal.history || []).some((e) => e.type === "TimerFired")),
+  adk_stopped: (st) => adkFinished(st) || (st.adk && st.adk.status === "unfinished" && !adkHostBusy()),
   outage_over: (st) => !st.model_outage_left,
-  both_retrying: (st) => st.adk && st.adk.retrying && st.adk.retrying.attempt >= 2 && st.temporal
-    && (st.temporal.pending || []).some((a) => a.activity === "invoke_model" && a.attempt >= 2),
+  adk_retrying: (st) => adkFinished(st) || Boolean(st.adk && st.adk.retrying && st.adk.retrying.attempt >= 2),
+  temporal_retrying: (st) => temporalFinished(st)
+    || Boolean(st.temporal && (st.temporal.pending || []).some((a) => a.activity === "invoke_model" && a.attempt >= 2)),
 };
+// The longest real wait is about 30s (a 20s deadline, or a retry after an Activity timeout). Past
+// this, something went off script: the player offers to move on anyway.
+const STUCK_MS = 45000;
 const PREDICATE_TEXT = {
   temporal_done: "Temporal finishing", adk_done: "ADK finishing", adk_unfinished: "ADK host A to crash and restart",
-  both_awaiting: "both sides to wait for a manager", deadline_passed: "the approval deadline to pass",
+  adk_awaiting: "ADK to wait for a manager", temporal_awaiting: "Temporal to wait for a manager",
+  deadline_passed: "the approval deadline to pass", temporal_timer_fired: "the deadline to pass and the timer to fire",
   adk_stopped: "the ADK invocation to stop", outage_over: "the model outage to end",
-  both_retrying: "both sides to retry the model",
+  adk_retrying: "ADK to retry the model", temporal_retrying: "Temporal to retry the model",
 };
 function pendingWaits() {
   const step = currentStep();
@@ -576,14 +735,17 @@ function pendingWaits() {
   return step.waitFor.filter((p) => !PREDICATES[p](state));
 }
 
-async function goTo(index) {
+async function goTo(index, { skipWait = false } = {}) {
   const act = currentAct();
   if (!act || busy || index < 0 || index >= act.steps.length) return;
+  // Forward only once this step's outcome has arrived (its "Waiting for …" line is gone),
+  // unless the presenter chose to skip a wait that has gone on too long.
+  if (index > stepIndex && stepIndex >= 0 && pendingWaits().length && !skipWait) return;
   busy = true;
   stepIndex = index;
   const a = state && state.processes.find((p) => p.key === "adk-a");
-  stepMark = { adkRestarts: a ? a.restarts : 0 };
-  renderPlayer();
+  stepMark = { adkRestarts: a ? a.restarts : 0, at: Date.now() };
+  renderAll();
   try {
     for (const action of act.steps[index].actions || []) {
       const res = await post(action.post, action.body);
@@ -596,49 +758,256 @@ async function goTo(index) {
   }
 }
 
-function claim(cls, tag, html, source) {
-  return h("div", { class: `claim compact ${cls}` }, h("div", { class: "tag" }, tag), h("p", { html }),
+// ---- The message typing in -------------------------------------------------------------
+// From the Temporal course's streaming.js: the message types itself out, with a caret. Text is
+// typed into its own nodes; anything that isn't prose (a table, a code block, a button) appears
+// whole when the typing gets to it, and an element shows only once something in it has. Long
+// messages type faster, so none takes more than `maxMs`. A click (or →) finishes it.
+const ATOMIC = "br, button, img, svg, pre, table, input";
+function streamIn(root, { charsPerSecond = 240, maxMs = 2500, onDone = () => {} } = {}) {
+  const units = [];
+  const hidden = [];
+  (function walk(node) {
+    for (const child of [...node.childNodes]) {
+      if (child.nodeType === Node.TEXT_NODE) {
+        units.push({ text: child, full: child.data, cost: child.data.trim() ? child.data.length : 0 });
+        child.data = "";
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        child.classList.add("stream-hidden");
+        hidden.push(child);
+        // A line break shows the moment the typing reaches it, not at the end.
+        if (child.matches(ATOMIC)) units.push({ el: child, cost: child.tagName === "BR" ? 1 : 24 });
+        else walk(child);
+      }
+    }
+  })(root);
+  const total = units.reduce((sum, u) => sum + u.cost, 0);
+  const speed = Math.max(charsPerSecond, (total * 1000) / maxMs);
+  const caret = Object.assign(document.createElement("span"), { className: "stream-caret" });
+  caret.setAttribute("aria-hidden", "true");
+  let index = 0, typed = 0, budget = 0, last = performance.now(), frame = 0, over = false;
+  const show = (unit) => {
+    for (let el = unit.el ?? unit.text.parentElement; el && el !== root; el = el.parentElement) el.classList.remove("stream-hidden");
+  };
+  function tick(now) {
+    budget += ((now - last) / 1000) * speed;
+    last = now;
+    while (index < units.length && budget > 0) {
+      const unit = units[index];
+      show(unit);
+      if (unit.el) { budget -= unit.cost; unit.el.after(caret); index++; continue; }
+      const n = Math.min(unit.full.length, typed + Math.ceil(budget));
+      budget -= n - typed;
+      typed = n;
+      unit.text.data = unit.full.slice(0, n);
+      unit.text.after(caret);
+      if (typed >= unit.full.length) { index++; typed = 0; }
+    }
+    if (index >= units.length) finish(); else frame = requestAnimationFrame(tick);
+  }
+  function finish() {
+    if (over) return;
+    over = true;
+    cancelAnimationFrame(frame);
+    for (const unit of units) if (unit.text) unit.text.data = unit.full;
+    for (const el of hidden) el.classList.remove("stream-hidden");
+    caret.remove();
+    onDone();
+  }
+  frame = requestAnimationFrame(tick);
+  return { finish };
+}
+
+// ---- Rendering: the player, a guide's conversation ----------------------------------------
+// One message per step, typed out the first time it's shown; Back and Next follow the message
+// once it has finished; the steps before it fold into a trail you can go back to. The message
+// is built once per step (the 700ms poll must not re-render it mid-typing); everything around it
+// is patched as usual.
+let shownKey = null;           // the act:step whose message is on screen
+const streamed = new Set();    // messages already typed out this visit
+let stream = null;
+let streaming = false;
+let trailOpen = false;
+let pinsOpen = false;          // the pinned claims: highlighted phrases only, or in full
+const sideLabel = (side) => (side === "adk" ? "ADK" : "Temporal");
+
+function finishTyping() { if (stream) stream.finish(); }
+
+// The scenario's claims: what each runtime does, with the phrase that matters highlighted.
+function thesis(act) {
+  if (!act.compare) return null;
+  const line = (side, who, html, source) => h("div", { class: `thesis-line ${side}` },
+    h("span", { class: "who" }, who), h("p", { html }),
     source ? h("div", { class: "src" }, "Source: ", h("a", { href: source.href, target: "_blank", rel: "noopener",
-                                                            title: "Opens the docs with the quoted sentence highlighted" }, `${source.label} ↗`)) : null);
+      title: "Opens the docs with the quoted sentence highlighted" }, `${source.label} ↗`)) : null);
+  return h("div", { class: "thesis" },
+    line("adk", "Google ADK", act.compare.adk, act.compare.adk_source),
+    line("temporal", "Temporal", act.compare.temporal, act.compare.temporal_source));
+}
+
+// The highlighted phrase(s) of a claim: what the pinned strip shows when it's closed.
+function highlights(html) {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = html;
+  const marks = [...tpl.content.querySelectorAll("mark")];
+  return marks.length ? marks.map((m) => m.innerHTML).join(" … ") : html;
+}
+
+function pinnedClaims(act) {
+  if (!act.compare || stepIndex < 0) return null;
+  const playing = currentStep() && currentStep().side;
+  const line = (side, who, html, source) => h("div", {
+      class: `thesis-line ${side} ${playing === side ? "on" : playing ? "off" : ""}` },
+    h("span", { class: "who" }, who),
+    pinsOpen ? h("p", { html }) : h("p", {}, h("mark", { html: highlights(html) })),
+    pinsOpen && source ? h("div", { class: "src" }, "Source: ", h("a", { href: source.href, target: "_blank", rel: "noopener",
+      onclick: (e) => e.stopPropagation() }, `${source.label} ↗`)) : null);
+  return h("div", { class: `pins ${pinsOpen ? "open" : ""}`, role: "button", tabindex: "0", "aria-expanded": String(pinsOpen),
+                    title: pinsOpen ? "Show only the highlighted phrases" : "Show the full claims",
+                    onclick: () => { pinsOpen = !pinsOpen; renderPlayer(); },
+                    onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pinsOpen = !pinsOpen; renderPlayer(); } } },
+    line("adk", "Google ADK", act.compare.adk, act.compare.adk_source),
+    line("temporal", "Temporal", act.compare.temporal, act.compare.temporal_source),
+    h("span", { class: "toggle-full" }, pinsOpen ? "▴ less" : "▾ full claim"));
+}
+
+function message(act) {
+  const step = currentStep();
+  if (!step) {
+    return h("article", { class: "guide-msg" }, h("span", { class: "guide-avatar", "aria-hidden": "true" }, "✦"),
+      h("div", { class: "guide-bubble" },
+        h("p", { class: "guide-kicker" }, `${act.short} · ${plural(act.steps.length, "step")}`),
+        h("h2", { class: "guide-title" }, act.title),
+        h("div", { class: "caption" },
+          act.compare ? h("p", { style: "margin:0" }, "The claim this scenario puts to the test:") : null,
+          thesis(act),
+          h("p", { style: act.compare ? "margin:10px 0 0" : "margin:0" }, act.contentOnly ? "Press Start (or →) to step through it."
+            : "Each step runs its actions when you reach it: real processes, real crashes. Press Start (or →)."),
+          act.proves && act.proves.length ? h("p", { class: "proves" }, "Comparison rows this scenario tests: ", act.proves.join(" · ")) : null)));
+  }
+  const where = `step ${stepIndex + 1} of ${act.steps.length}`;
+  return h("article", { class: `guide-msg ${step.side || ""}` },
+    h("span", { class: "guide-avatar", "aria-hidden": "true" }, "✦"),
+    h("div", { class: "guide-bubble" },
+      h("p", { class: "guide-kicker" }, step.side ? `${sideLabel(step.side)} · ${where}` : `${act.short} · ${where}`),
+      h("h2", { class: "guide-title" }, step.title),
+      h("div", { class: "caption", html: step.caption })));
+}
+
+// On to another scenario (a tab, or "On to Scenario N"): its intro, and a clean stage. The
+// previous scenario's run, crashed processes and armed crash points are cleared now, not at the
+// new scenario's first step, so the columns don't show the last scenario under the new one's intro.
+async function switchScenario(i) {
+  finishTyping();
+  actIndex = i; stepIndex = -1; autoplay = false; trailOpen = false; pinsOpen = false;
+  store.set("act", String(i));
+  renderAll();
+  if (busy) return;
+  busy = true;
+  renderPlayer();
+  try {
+    const res = await post("/api/reset");
+    if (res.status >= 400) console.warn("/api/reset", res.body);
+    seen.adk.clear(); seen.temporal.clear();
+  } finally {
+    busy = false;
+    await refresh();
+  }
 }
 
 function renderPlayer() {
   const root = document.getElementById("player");
   const act = currentAct();
-  if (!act) { patch(root, h("p", { class: "muted" }, "Loading scenarios…")); return; }
-  const step = currentStep();
+  if (!act) { patch(root, h("p", { class: "muted", style: "padding:14px" }, "Loading scenarios…")); return; }
+  if (!root.querySelector(".thread")) {
+    root.replaceChildren(
+      h("div", { class: "pane-head" }, h("div", { class: "acts", role: "group", "aria-label": "Scenarios" }), h("div", { class: "segs" }),
+        h("div", { class: "pin-slot", "aria-label": "The claim this scenario tests" })),
+      h("div", { class: "thread" }, h("div", { class: "trail-slot" }), h("div", { class: "msg-slot" }),
+        h("div", { class: "wait-slot" }), h("div", { class: "replies", role: "group", "aria-label": "Reply" })));
+  }
+  const part = (sel) => root.querySelector(sel);
+  const thread = part(".thread");
+
+  patch(part(".acts"), h("span", { class: "tabs-label" }, "Scenario"), scenarios.map((a, i) =>
+    h("button", { type: "button", title: a.title, "aria-pressed": String(i === actIndex), onclick: () => {
+      switchScenario(i);
+    } }, h("span", { class: "long" }, a.title), h("span", { class: "short" }, a.tab || a.short))));
+  patch(part(".segs"), act.steps.map((s, i) => h("i", {
+    class: i < stepIndex ? "filled" : i === stepIndex ? "current" : "", title: `${i + 1}. ${s.title}` })),
+    h("span", { class: "count" }, `${Math.max(0, stepIndex + 1)}/${act.steps.length}`));
+
+  // The trail: the steps before this one, folded; each goes back (caption only, nothing is undone).
+  const earlier = act.steps.slice(0, Math.max(0, stepIndex));
+  patch(part(".pin-slot"), pinnedClaims(act));
+  patch(part(".trail-slot"), earlier.length ? h("details", { class: "trail", open: trailOpen, ontoggle: (e) => { trailOpen = e.target.open; } },
+    h("summary", {}, h("span", { class: "count" }, `${earlier.length} earlier`),
+      h("span", { class: "last" }, `✓ ${earlier[earlier.length - 1].title}`)),
+    h("ol", {}, earlier.map((s, i) => h("li", {}, h("button", { type: "button", class: "trail-item",
+      title: "Show this step again (nothing is undone)", onclick: () => { finishTyping(); stepIndex = i; trailOpen = false; renderAll(); } },
+      h("span", { class: "mark", "aria-hidden": "true" }, "✓"),
+      s.side ? h("span", { class: `tag ${s.side}` }, s.side === "adk" ? "ADK" : "TMP") : null, s.title))))) : null);
+
+  // The message: built once per step, typed out the first time.
+  const key = `${actIndex}:${stepIndex}`;
+  if (key !== shownKey) {
+    finishTyping();
+    shownKey = key;
+    const slot = part(".msg-slot");
+    slot.replaceChildren(message(act));
+    const bubble = slot.querySelector(".guide-bubble");
+    const caption = bubble.querySelector(".caption");
+    thread.scrollTo({ top: 0 });
+    if (!streamed.has(key)) {
+      streamed.add(key);
+      streaming = true;
+      bubble.classList.add("is-streaming");
+      bubble.addEventListener("click", finishTyping);
+      const mine = stream = streamIn(caption, { onDone: () => {
+        if (stream === mine) stream = null;
+        bubble.classList.remove("is-streaming");
+        streaming = false;
+        requestAnimationFrame(() => { renderPlayer(); revealReplies(); });
+      } });
+    }
+  }
+
   const waits = pendingWaits();
+  patch(part(".wait-slot"), currentStep() && waits.length
+    ? h("div", { class: "waiting" }, `Waiting for ${waits.map((w) => PREDICATE_TEXT[w]).join(" and ")}…`) : null);
+
+  // The replies, under the message once it has typed out: Back on the left, Next rightmost.
+  const replies = part(".replies");
+  replies.hidden = streaming;
   const atEnd = stepIndex >= act.steps.length - 1;
-  const nextLabel = stepIndex < 0 ? `Start ${act.short}` : atEnd ? "Done" : "Next →";
-  patch(root, 
-    h("div", { class: "acts", role: "group", "aria-label": "Acts" }, scenarios.map((a, i) =>
-      h("button", { type: "button", "aria-pressed": String(i === actIndex), onclick: () => {
-        actIndex = i; stepIndex = -1; autoplay = false; store.set("act", String(i)); renderAll();
-      } }, a.title))),
-    act.compare ? h("div", { class: "act-compare", "aria-label": `${act.short}: ADK vs Temporal` },
-      claim("adk", "Google ADK", act.compare.adk, act.compare.adk_source),
-      claim("temporal good", "Temporal", act.compare.temporal, act.compare.temporal_source)) : null,
-    h("div", {},
-      step ? [
-        h("div", { class: "step-title" }, step.title),
-        h("div", { class: "caption", html: step.caption }),
-        waits.length ? h("div", { class: "waiting" }, `Waiting for ${waits.map((w) => PREDICATE_TEXT[w]).join(" and ")}…`) : null,
-      ] : [
-        h("div", { class: "step-title" }, act.title),
-        h("div", { class: "caption muted" }, `${plural(act.steps.length, "step")}. Press Start (or →). Each step runs its actions when you reach it.`),
-        act.proves && act.proves.length ? h("div", { class: "proves" }, "Comparison rows this act tests: ", act.proves.join(" · ")) : null,
-      ],
-    ),
-    h("div", { class: "nav" },
-      h("button", { class: "primary", disabled: busy || atEnd, onclick: () => goTo(stepIndex + 1) }, nextLabel),
-      h("div", { class: "nav-row" },
-        h("button", { class: "small", title: "Back one step (caption only; nothing is undone)", "aria-label": "Back",
-                      disabled: busy || stepIndex <= 0, onclick: () => { stepIndex -= 1; renderPlayer(); } }, "←"),
-        h("span", { class: "progress" }, stepIndex < 0 ? plural(act.steps.length, "step") : `step ${stepIndex + 1} of ${act.steps.length}`),
-        h("button", { class: "small", "aria-pressed": String(autoplay), title: "Advance 6s after each step's outcome arrives",
-                      onclick: () => { autoplay = !autoplay; renderPlayer(); } }, autoplay ? "⏸ Auto" : "▶ Auto")),
-    ),
-  );
+  const nextAct = scenarios[actIndex + 1];
+  const waiting = Boolean(currentStep() && waits.length);
+  const stuck = waiting && stepMark.at && Date.now() - stepMark.at > STUCK_MS;
+  const waitTitle = waiting ? `Waiting for ${waits.map((w) => PREDICATE_TEXT[w]).join(" and ")}` : undefined;
+  patch(replies,
+    stepIndex > 0 ? h("button", { type: "button", class: "reply is-quiet is-back", title: "Back one step (caption only; nothing is undone)",
+                                  disabled: busy, onclick: () => { stepIndex -= 1; renderAll(); } }, "← Back") : null,
+    stepIndex >= 0 && !atEnd ? h("button", { type: "button", class: "reply is-quiet", "aria-pressed": String(autoplay),
+      title: "Advance 6s after each step's outcome arrives", onclick: () => { autoplay = !autoplay; renderPlayer(); } }, autoplay ? "⏸ Auto" : "▶ Auto") : null,
+    stuck && !atEnd ? h("button", { type: "button", class: "reply is-quiet",
+      title: "The outcome hasn't arrived after 45s. Move on anyway; the picture may not match the caption.",
+      onclick: () => goTo(stepIndex + 1, { skipWait: true }) }, "Skip waiting →") : null,
+    !atEnd ? h("button", { type: "button", class: "reply is-primary", disabled: busy || waiting, title: waitTitle, onclick: () => goTo(stepIndex + 1) },
+                stepIndex < 0 ? `▶ Start ${act.short}` : "Next →")
+      : nextAct ? h("button", { type: "button", class: "reply is-primary", disabled: waiting && !stuck, title: waitTitle, onclick: () => {
+          switchScenario(actIndex + 1);
+        } }, `On to ${nextAct.short} →`)
+      : h("span", { class: "reply is-quiet" }, "The end. Questions?"));
+}
+
+// Once a message has typed out: bring its replies into view, keeping the message's start in sight.
+function revealReplies() {
+  const thread = document.querySelector("#player .thread");
+  const replies = thread && thread.querySelector(".replies");
+  const msg = thread && thread.querySelector(".guide-msg");
+  if (!replies || !msg || thread.scrollHeight <= thread.clientHeight) return;
+  const bottom = replies.offsetTop + replies.offsetHeight + 16 - thread.clientHeight;
+  thread.scrollTo({ top: Math.max(0, Math.min(msg.offsetTop - 8, bottom)), behavior: "smooth" });
 }
 
 let autoTimer = 0;
@@ -646,9 +1015,9 @@ function maybeAutoplay() {
   if (!autoplay || busy) return;
   const act = currentAct();
   if (!act || stepIndex >= act.steps.length - 1) { autoplay = false; return; }
-  if (pendingWaits().length) return;
+  if (pendingWaits().length || streaming) return;
   if (autoTimer) return;
-  autoTimer = setTimeout(() => { autoTimer = 0; if (autoplay && !pendingWaits().length) goTo(stepIndex + 1); }, 6000);
+  autoTimer = setTimeout(() => { autoTimer = 0; if (autoplay && !streaming && !pendingWaits().length) goTo(stepIndex + 1); }, 6000);
 }
 
 // ---- Rendering: a side ----------------------------------------------------------
@@ -657,14 +1026,20 @@ function renderSide(side) {
   const meta = SIDES[side];
   const p = picture(side);
   const statusChip = !state.run ? h("span", { class: "chip" }, "idle")
+    : !sideRun(side) ? h("span", { class: "chip" }, "not started yet")
     : p.done ? h("span", { class: "chip ok" }, "completed")
     : p.awaiting ? h("span", { class: "chip warn" }, "waiting for approval")
     : side === "adk" && p.status === "unfinished" && !adkHostBusy() ? h("span", { class: "chip bad" }, "unfinished · nobody working on it")
     : h("span", { class: "chip info" }, "running");
+  const playing = currentStep() && currentStep().side;
+  root.classList.toggle("playing", playing === side);
+  // The other column rests (dims) only while nothing is happening in it: never grey out a column
+  // that is still making progress.
+  root.classList.toggle("resting", Boolean(playing) && playing !== side && !sideActive(side));
   if (!root.firstChild) {
     root.append(h("div", { class: "side-head" }), h("div", { class: "side-bar" }),
-      h("div", { class: "side-body" }, h("div", { class: "flow" }),
-        h("div", { class: "panels" }, h("div", { class: "slot approval" }), h("div", { class: "slot recovery" }), h("div", { class: "slot persisted" }))),
+      h("div", { class: "side-body" }, h("div", { class: "body" }, h("div", { class: "flow" }),
+        h("div", { class: "panels" }, h("div", { class: "slot approval" }), h("div", { class: "slot recovery" }), h("div", { class: "slot persisted" })))),
       h("div", { class: "slot logs" }));
   }
   const part = (sel) => root.querySelector(sel);
@@ -678,6 +1053,14 @@ function renderSide(side) {
     const log = root.querySelector(".log");
     if (log) log.scrollTop = log.scrollHeight;
   }
+}
+
+// Is this side's run making progress right now? ADK: a live host is working on the invocation.
+// Temporal: the Workflow is running (a Worker may be mid-task, or a timer is pending).
+function sideActive(side) {
+  if (!sideRun(side)) return false;
+  if (side === "adk") return Boolean(state.adk && state.adk.status === "unfinished" && adkHostBusy());
+  return Boolean(state.temporal && state.temporal.status === "RUNNING");
 }
 
 function adkHostBusy() {
@@ -757,7 +1140,7 @@ function renderFlow(side) {
 }
 
 function renderApproval(side, p) {
-  const run = state.run;
+  const run = sideRun(side);
   if (!run || run.approval_threshold_cents == null) return null;
   const where = side === "adk" ? "Timer: an asyncio task in the ADK host's memory" : "Timer: on the Temporal Service (TimerStarted)";
   const escalated = businessOps(side).escalations;
@@ -792,9 +1175,9 @@ function renderApproval(side, p) {
 
 function renderRecovery(side, p) {
   if (side === "adk") {
-    const orphan = state.run && p.status === "unfinished" && !adkHostBusy();
+    const orphan = sideRun("adk") && p.status === "unfinished" && !adkHostBusy();
     const rec = state.recovered;
-    return h("div", { class: `panel clickable weak ${orphan ? "hurting" : ""}`, title: "Click for the recovery code (recovery.py)",
+    return h("div", { class: `panel clickable ${orphan ? "weak hurting" : ""}`, title: "Click for the recovery code (recovery.py)",
                       onclick: (e) => { if (e.target.tagName !== "BUTTON") openNode("adk", "recovery"); } },
       h("div", { class: "panel-head" }, h("h3", {}, "Who resumes?"), h("span", { class: "muted" }, "code ›")),
       h("div", { class: "big" }, "Your code. ADK resumes only when asked."),
@@ -804,7 +1187,7 @@ function renderRecovery(side, p) {
         rec.resumed.length > 1 ? h("b", {}, rec.resumed.map((r) => `host ${r.host.toUpperCase()}`).join(" and "), ": the same invocation, twice")
                                : `host ${rec.resumed[0].host.toUpperCase()}`) : null,
       h("div", { style: "margin-top:6px;display:flex;gap:6px;flex-wrap:wrap" },
-        h("button", { class: orphan ? "small primary" : "small", onclick: () => post("/api/adk/recover").then(refresh) }, "Run recovery scan + resume"),
+        h("button", { class: orphan ? "small attention" : "small", onclick: () => post("/api/adk/recover").then(refresh) }, "Run recovery scan + resume"),
         state.processes.filter((x) => x.side === "adk" && x.state === "running").length > 1
           ? h("button", { class: "small", title: "Every live host runs the scan at the same moment, as replicas scanning on startup would",
                           onclick: () => post("/api/adk/recover", { hosts: "all" }).then(refresh) }, "Scan on every host") : null));
@@ -812,7 +1195,7 @@ function renderRecovery(side, p) {
   const hist = (state.temporal && state.temporal.history) || [];
   const workers = [...new Set(hist.filter((e) => e.identity).map((e) => e.identity.replace(/^.*?(worker-\w).*$/, "$1")))];
   const timedOut = hist.filter((e) => e.type === "WorkflowTaskTimedOut" || e.type === "ActivityTaskTimedOut").length;
-  return h("div", { class: "panel clickable good", title: "Click for how a Worker picks up work", onclick: () => openNode("temporal", "recovery") },
+  return h("div", { class: `panel clickable ${timedOut ? "good" : ""}`, title: "Click for how a Worker picks up work", onclick: () => openNode("temporal", "recovery") },
     h("div", { class: "panel-head" }, h("h3", {}, "Who resumes?"), h("span", { class: "muted" }, "code ›")),
     h("div", { class: "big" }, "Any Worker on the task queue, automatically."),
     h("div", { class: "line muted" },
@@ -834,7 +1217,7 @@ function renderPersistence(side, p) {
     h("div", { class: "panel-head" },
       h("h3", {}, title),
       h("span", { class: "muted" }, `${recs.length} events`,
-        ui ? [" · ", h("a", { href: ui, target: "_blank", rel: "noopener", title: "Open this Workflow in the Temporal UI" }, "UI ↗")] : "")),
+        ui ? [" · ", h("a", { href: ui, target: "_blank", rel: "noopener", title: "Open this Workflow in the Temporal UI" }, "See in Temporal UI ↗")] : "")),
     list);
   requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
   return panel;
@@ -919,7 +1302,7 @@ function renderBusiness() {
     const dup = !r.replayed && seenKey[k] > 1;
     return h("tr", { class: dup ? "dup" : r.replayed ? "replayed" : "" },
       h("td", {}, h("span", { class: `side-tag ${r.side}` }, r.side === "adk" ? "ADK" : "TEMPORAL")),
-      h("td", {}, run ? `+${(r.ts - run.started_at).toFixed(1)}s` : ""),
+      h("td", {}, run ? `+${(r.ts - ((run.started && run.started[r.side]) || run.started_at)).toFixed(1)}s` : ""),
       h("td", {}, money(r.amount_cents), item ? h("span", { class: "muted" }, ` · item ${item}`) : ""),
       h("td", { class: "mono" }, r.refund_id),
       h("td", { class: "mono" }, r.idempotency_key ? r.idempotency_key.slice(0, 22) + "…" : h("span", { class: "muted" }, "none")),
@@ -959,9 +1342,33 @@ const WHAT = {
   done: "The agent's final answer.",
   recovery: "",
 };
+// The vendors' own docs on resuming, as Scenario 1's claims cite them (the link highlights the sentence).
+const docLink = (href, label) => ` <span class="doc-link">Read more: <a href="${href}" target="_blank" rel="noopener">${label} ↗</a></span>`;
+const ADK_RESUME_DOC = docLink("https://adk.dev/runtime/resume/#:~:text=When%20an%20ADK%20workflow%20stops%20execution%20you%20can%20resume%20the%20workflow%20using%20a%20command%20containing%20the%20Invocation%20ID%20for%20the%20workflow%20instance", "ADK docs: Resume stopped agents");
+const TEMPORAL_TASK_DOC = docLink("https://docs.temporal.io/tasks#how-worker-processes-workflow-task:~:text=If%20a%20Worker%20crashes%20mid%2Dexecution%2C%20another%20Worker%20can%20pick%20up%20the%20Workflow%20Task", "Temporal docs: How a Worker processes a Workflow Task");
+
+// Code views that aren't a step in the diagram: linked from the captions.
+const EXTRA_NODES = {
+  agent: {
+    label: "the agent and how it runs",
+    what: {
+      adk: "The same agent.py on both sides: one LlmAgent, three tools, an approval policy. Here the ADK host runs it with resumability on (ResumabilityConfig(is_resumable=True)) and a persistent SqliteSessionService, as the ADK docs describe.",
+      temporal: "The same agent.py, built with a model and tools that run as Activities through the official Temporal ADK plugin. The Workflow runs the agent; every model call and tool call is recorded in its event history.",
+    },
+  },
+  runtime: {
+    label: "how a run starts and resumes",
+    what: {
+      adk: "A host starts an invocation when asked (/runs) and resumes one only when asked, by its invocation id (/resume). Both end in drive, which calls <mark>runner.run_async</mark> (highlighted below): with an invocation_id, that is a resume." + ADK_RESUME_DOC,
+      temporal: "The Workflow runs the agent; a Worker polls the task queue and runs whatever Workflow or Activity task is next. No resume call exists or is needed." + TEMPORAL_TASK_DOC,
+    },
+  },
+};
+// The call an explanation points at: its line is highlighted in the code below it.
+const CODE_HIGHLIGHT = { adk: { recovery: "run_async", runtime: "run_async" } };
 const RECOVERY_WHAT = {
-  adk: "ADK resumes an invocation only when something calls run_async(invocation_id=…). After a crash, something has to find the unfinished invocations and pick a host to resume them on. This is the smallest version of that code. A production version also needs a sweeper schedule, a way to tell dead from slow, leases, deadlines and a story for code changes.",
-  temporal: "Nothing to write. A Worker is a stateless poller: any Worker on the task queue picks up any Workflow task and rebuilds the Workflow's state by replaying its event history. The Temporal Service notices a dead Worker through timeouts and hands its work to another.",
+  adk: "ADK resumes an invocation only when something calls <mark>runner.run_async</mark> with its invocation_id. After a crash, something has to find the unfinished invocations and pick a host to resume them on. This is the smallest version of that code: the scan finds them, /recover passes each invocation_id to drive, and drive calls <mark>runner.run_async</mark> (highlighted in the last block below). A production version also needs a sweeper schedule, a way to tell dead from slow, leases, deadlines and a story for code changes." + ADK_RESUME_DOC,
+  temporal: "Nothing to write. A Worker is a stateless poller: any Worker on the task queue picks up any Workflow task and rebuilds the Workflow's state by replaying its event history. The Temporal Service notices a dead Worker through timeouts and hands its work to another." + TEMPORAL_TASK_DOC,
 };
 
 let dialogState = null;
@@ -983,37 +1390,46 @@ function renderDialog() {
   const inner = dialog.querySelector(".inner");
   if (!dialogState) return;
   const { side, node, tab, source } = dialogState;
-  const label = node === "recovery" ? "who resumes after a crash" : (NODES.find((n) => n.id === node) || { label: node }).label;
+  const extra = EXTRA_NODES[node];
+  const label = node === "recovery" ? "who resumes after a crash" : extra ? extra.label : (NODES.find((n) => n.id === node) || { label: node }).label;
   const setTab = (t) => { dialogState.tab = t; renderDialog(); };
   patch(inner, 
     h("div", { class: "head" },
       h("h2", { id: "node-title" }, h("span", { class: `side-tag ${side}`, style: "font-size:13px" }, side === "adk" ? "ADK · " : "TEMPORAL · "), label),
       h("button", { type: "button", onclick: () => dialog.close() }, "Close")),
-    h("div", { class: "what" }, node === "recovery" ? RECOVERY_WHAT[side] : WHAT[node] || ""),
-    h("div", { class: "tabs", role: "group", "aria-label": "View" },
+    h("div", { class: "what", html: node === "recovery" ? RECOVERY_WHAT[side] : extra ? extra.what[side] : WHAT[node] || "" }),
+    // A setup view has code only; a step also has what this run persisted for it.
+    extra ? null : h("div", { class: "tabs", role: "group", "aria-label": "View" },
       [["code", "Code"], ["persisted", "What's persisted"]].map(([t, l]) => h("button", { type: "button", "aria-pressed": String(tab === t), onclick: () => setTab(t) }, l))),
-    tab === "code" ? renderCode(source) : renderPersisted(side, node),
+    tab === "code" || extra ? renderCode(source, (CODE_HIGHLIGHT[side] || {})[node]) : renderPersisted(side, node),
   );
 }
 
-function renderCode(source) {
+function renderCode(source, term) {
   if (source == null) return h("p", { class: "muted" }, "Loading source…");
   if (!source.length) return h("p", { class: "muted" }, "No source for this step.");
   return h("div", {}, source.map((part) => h("div", { class: "part" },
     h("div", { class: "part-title" }, h("code", {}, part.name), h("span", { class: "muted" }, `refund_demo/${part.file}:${part.line}`)),
-    codeBlock(part.runs, part.line))));
+    codeBlock(part.runs, part.line, term))));
 }
 
-function codeBlock(runs, first) {
+function codeBlock(runs, first, term) {
   const lines = [[]];
+  const texts = [""];
+  // Plain text containing the term: split so the term itself can be marked.
+  const mark = (piece) => !term || !piece.includes(term) ? [piece]
+    : piece.split(term).flatMap((bit, i) => (i ? [h("mark", { class: "code-hl" }, term), bit] : [bit])).filter((x) => x !== "");
   for (const [kind, text] of runs) {
     text.split("\n").forEach((piece, i) => {
-      if (i) lines.push([]);
-      if (piece) lines[lines.length - 1].push(kind ? h("span", { class: `t-${kind}` }, piece) : piece);
+      if (i) { lines.push([]); texts.push(""); }
+      if (!piece) return;
+      texts[texts.length - 1] += piece;
+      lines[lines.length - 1].push(...(kind ? [h("span", { class: `t-${kind}` }, piece)] : mark(piece)));
     });
   }
-  if (!lines[lines.length - 1].length) lines.pop();
-  return h("pre", { class: "code" }, lines.flatMap((line, i) => [h("span", { class: "ln" }, first + i), ...line, "\n"]));
+  if (!lines[lines.length - 1].length) { lines.pop(); texts.pop(); }
+  return h("pre", { class: "code" }, lines.map((line, i) =>
+    h("span", { class: `cl ${term && texts[i].includes(term) ? "hl" : ""}` }, h("span", { class: "ln" }, first + i), ...line)));
 }
 
 function adkDetail(e) {
@@ -1069,6 +1485,15 @@ function renderPersisted(side, node) {
 }
 
 document.getElementById("node-dialog").addEventListener("click", (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+document.getElementById("player").addEventListener("click", (e) => {
+  const link = e.target.closest("a[data-code]");
+  if (!link) return;
+  e.preventDefault();
+  e.stopPropagation();
+  finishTyping();
+  const [side, node] = link.dataset.code.split("/");
+  openNode(side, node);
+});
 document.getElementById("node-dialog").addEventListener("close", () => { dialogState = null; });
 
 // ---- Loop -------------------------------------------------------------------
@@ -1095,9 +1520,13 @@ async function refresh() {
 
 document.addEventListener("keydown", (e) => {
   if (document.getElementById("node-dialog").open || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
-  if (e.key === "ArrowRight") goTo(stepIndex + 1);
-  if (e.key === "ArrowLeft" && stepIndex > 0) { stepIndex -= 1; renderPlayer(); }
+  // While a message types out, → finishes it; the next → moves on.
+  if (e.key === "ArrowRight") { if (streaming) finishTyping(); else goTo(stepIndex + 1); }
+  if (e.key === "ArrowLeft" && stepIndex > 0) { finishTyping(); stepIndex -= 1; renderAll(); }
 });
+
+new ResizeObserver(([entry]) => document.documentElement.style.setProperty(
+  "--header-h", `${Math.round(entry.target.getBoundingClientRect().height)}px`)).observe(document.querySelector("header"));
 
 (async function main() {
   const res = await api("/static/scenarios.json");

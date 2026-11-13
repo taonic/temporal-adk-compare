@@ -112,6 +112,7 @@ def create_app(name: str) -> FastAPI:
     async def drive(label: str, **run_kwargs) -> None:
         print(f"[host {name}] {label}", flush=True)
         try:
+            # A new run, or a resume: /resume and /recover pass invocation_id=… in run_kwargs.
             async for event in runner.run_async(**run_kwargs):
                 _log_event(name, event)
         except Exception as err:  # noqa: BLE001 - a failed invocation stays unfinished in the session store

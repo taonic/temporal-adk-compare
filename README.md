@@ -11,7 +11,7 @@ One Google ADK agent runs on two runtimes side by side, through the same crashes
 
 Every process is real and every crash is a real `kill -9`. A mock payment provider records how many times the money actually moved.
 
-![The demo UI after the first resume in Act 4: ADK refunded $1,000 for a $500 request, Temporal refunded $500](doc/ui.png)
+![The demo UI after the first resume in Scenario 4: ADK refunded $1,000 for a $500 request, Temporal refunded $500](doc/ui.png)
 
 > [!NOTE]
 > This is a demo for an architecture conversation, not a benchmark. ADK's
@@ -28,7 +28,7 @@ Requires [uv](https://docs.astral.sh/uv/) and the [Temporal CLI](https://docs.te
 make demo        # opens http://localhost:8400
 ```
 
-`make demo` starts the business systems, ADK host A and Temporal Worker A. If nothing is listening on `localhost:7233` it also starts a Temporal dev server, with its Web UI on <http://localhost:8233>. Pick an act and press **→** (or **Start**) to step through it. Each step runs its actions and shows its talk track as a caption.
+`make demo` starts the business systems, ADK host A and Temporal Worker A. If nothing is listening on `localhost:7233` it also starts a Temporal dev server, with its Web UI on <http://localhost:8233>. Pick a scenario and press **→** (or **Start**) to step through it. Each step runs its actions and shows its talk track as a caption. One column plays at a time: each beat runs on ADK first, then the same refund runs on Temporal.
 
 The agent uses a deterministic fake model by default, so every run takes the same steps. To use Gemini instead:
 
@@ -38,7 +38,7 @@ GOOGLE_API_KEY=... REFUND_DEMO_MODEL=gemini-2.5-flash make demo
 
 The tests and the runbook assume the fake model; a real model may word its tool calls differently.
 
-To run every act headless, against real processes, in about two minutes:
+To run every scenario headless, against real processes, in about two minutes:
 
 ```bash
 make test
@@ -46,14 +46,14 @@ make test
 
 For presenting, see [RUNBOOK.md](RUNBOOK.md).
 
-## The acts
+## The scenarios
 
-| Act | What happens | What it shows | Comparison rows it tests |
+| Scenario | What happens | What it shows | Comparison rows it tests |
 |---|---|---|---|
 | **1. Recovery: automatic vs on request** | A spare ADK host and a spare Worker are healthy; the busy ones die before emailing the customer. | **Temporal**: the other Worker picks the refund up from the task queue, with no one calling anything. **ADK**: the spare host sits idle next to an unfinished invocation, until someone runs the recovery code. | Resume after process crash · Distributing work across hosts |
-| **2. Retries: durable vs in memory** | Every model call fails with a 429; both sides retry on the same schedule (1s, doubling, capped at 4s). Then both processes are killed mid-retry. | Until the kill, the same. **ADK** retries in process (`retry_options`, as on `Gemini`): the retry loop dies with the host, and the invocation stays unfinished until the recovery scan resumes it. **Temporal** keeps the attempt count and the next retry time on the Temporal Service: the restarted Worker carries on with the next attempt and finishes by itself once the model is back. | Retries · Resume after process crash |
+| **2. Retries: durable vs in memory** | Every model call fails with a 429; both sides retry on the same schedule (1s, doubling, capped at 4s). Then each side's process is killed mid-retry. | Until the kill, the same. **ADK** retries in process (`retry_options`, as on `Gemini`): the retry loop dies with the host, and the invocation stays unfinished until the recovery scan resumes it. **Temporal** keeps the attempt count and the next retry time on the Temporal Service: the restarted Worker carries on with the next attempt and finishes by itself once the model is back. | Retries · Resume after process crash |
 | **3. Timers: durable vs in memory** | Refunds over $250 need a manager within 48h (20s in the demo). Both sides enforce the deadline: ADK's host with an `asyncio` timer, Temporal with a durable timer. Every process is stopped during the wait. | Both pause the same way, with ADK's own tool confirmation. **Temporal**'s timer fires on the Temporal Service with no Worker running, then the next Worker escalates and denies. **ADK**'s timer was in the stopped host's memory: the invocation stays paused past the deadline, still resumable by a late approval. With every process up, both deadlines fire (the tests check both). | Durable timers · Human-in-the-loop · Long-running business processes |
-| **4. Tool results: recorded on completion vs saved later** | Both processes die right after `refund_payment` returns, before the result is recorded. | **ADK refunds twice** once resumed: the money moved but the session database never got the result. **Temporal refunds once**: the Temporal Service recorded the Activity's result the moment it reported back, and replay reuses it. Then, with a crash *inside* the tool, **both** refund twice, until an idempotency key makes both safe. | Avoid repeating completed steps · External tool side effects · Resume after process crash |
+| **4. Tool results: recorded on completion vs saved later** | Each side's process dies right after `refund_payment` returns, before the result is recorded. | **ADK refunds twice** once resumed: the money moved but the session database never got the result. **Temporal refunds once**: the Temporal Service recorded the Activity's result the moment it reported back, and replay reuses it. Then, with a crash *inside* the tool, **both** refund twice, until an idempotency key makes both safe. | Avoid repeating completed steps · External tool side effects · Resume after process crash |
 
 The **Wrap-up** is content only, in four slides: the four results in one table (durable execution takes care of automated process recovery, durable retries, durable timers and strongly consistent tool execution; the resumable agent leaves each to your code or to process memory), the full capability comparison, the recommended architecture, and the questions to ask any agent runtime.
 
@@ -77,7 +77,7 @@ Interactive versions: [architecture](doc/architecture.html), [ADK crash sequence
 | [refund_demo/faults.py](refund_demo/faults.py) | Crash points: `os._exit` at an exact place, armed per side, consumed once. |
 | [refund_demo/business/service.py](refund_demo/business/service.py) | Mock payment provider, order system and email, honouring `Idempotency-Key`. The ground truth. |
 | [refund_demo/api.py](refund_demo/api.py), [procs.py](refund_demo/procs.py) | Control plane: starts and kills processes (optionally restarting them, like Kubernetes), and reads all three sources of truth for the UI. |
-| [refund_demo/static/](refund_demo/static/) | The UI: one HTML page, no build step. [scenarios.json](refund_demo/static/scenarios.json) holds the acts and their captions. |
+| [refund_demo/static/](refund_demo/static/) | The UI: one HTML page, no build step. [scenarios.json](refund_demo/static/scenarios.json) holds the scenarios and their captions. |
 | [refund_demo/source_view.py](refund_demo/source_view.py) | Serves the code behind each diagram node, read from the running modules with `inspect`. |
 
 Click any step in either diagram for two tabs: **Code**, the real source behind that step, and **What's persisted**, the session events or history events recorded for it in this run, next to how many times the side effect really happened.
@@ -118,11 +118,11 @@ ADK writes an event to the session database after each step of the agent. A tool
 >
 > (`google/adk/apps/_configs.py`, google-adk 2.13.0)
 
-On Temporal, a tool call is an Activity. The **Temporal Service** records its result as soon as the Activity reports back, before any Workflow code runs. A crash after that point can't lose the result, and replay returns it without running the tool again. A crash *inside* the Activity, before it reports back, means a retry after the Activity's timeout. **Neither runtime makes an external side effect exactly-once by itself.** Act 4 shows both refunding twice in that case, and an idempotency key fixing both. What Temporal changes is where the window is (inside the Activity only), who handles the retry, and how (declared per Activity, every attempt in the history).
+On Temporal, a tool call is an Activity. The **Temporal Service** records its result as soon as the Activity reports back, before any Workflow code runs. A crash after that point can't lose the result, and replay returns it without running the tool again. A crash *inside* the Activity, before it reports back, means a retry after the Activity's timeout. **Neither runtime makes an external side effect exactly-once by itself.** Scenario 4 shows both refunding twice in that case, and an idempotency key fixing both. What Temporal changes is where the window is (inside the Activity only), who handles the retry, and how (declared per Activity, every attempt in the history).
 
 The key in this demo is `<run id>:<function call id>`. Both runtimes keep the function call id stable: Temporal retries with the arguments recorded in the history, and ADK resumes with the function call it persisted (`tests/test_acts.py` checks that the key deduplicates on both). In production, prefer a key derived from the business operation, such as the refund request's id.
 
-Two more places where ADK's boundary sits. The acts don't stage them, but `tests/test_acts.py` reproduces both:
+Two more places where ADK's boundary sits. The scenarios don't stage them, but `tests/test_acts.py` reproduces both:
 
 - **Parallel tool calls are saved together.** When the model asks for several tools in one turn, ADK runs them concurrently and writes all their results as one event, once every call has returned (`google/adk/flows/llm_flows/tools/_batch_executor.py`). If a call raises, ADK keeps its siblings' finished results; if the process dies, none are saved, and a resume runs every call in the turn again, including those that had finished. The Temporal plugin runs each call as its own Activity, so each result is recorded as it completes.
 - **Concurrent resumes are caught after the fact.** The persistent session services check for a conflicting writer when an event is appended (`append_event` raises `StaleSessionError`). A tool runs before its result is appended, so two hosts resuming one invocation both run the tool, and only then does one of them fail. Preventing that takes a lease in your recovery code. On Temporal, the Service hands a task to one Worker at a time.
@@ -132,14 +132,14 @@ Two more places where ADK's boundary sits. The acts don't stage them, but `tests
 | Capability | Google ADK | Temporal | In the demo |
 |---|---|---|---|
 | Persistent agent state | Session events in a session service | Workflow event history | Both columns' "What's persisted" |
-| Resume after a process crash | Yes, when something calls `run_async(invocation_id=...)` | Automatic: any Worker polling the task queue | Acts 1, 2 and 4 |
-| Avoid repeating completed steps | For steps whose result event was written; parallel calls in one turn are written together, after the last returns | For Activities whose completion was recorded, each on its own | Act 4 |
-| Retries | Per node in ADK graph workflows; in-process `retry_options` on the Gemini model (off by default); varies by runtime | Per Activity, for model calls and tools alike: timeout, backoff, attempts, across restarts | Act 2; Act 4 (`attempt 2`) |
-| Durable timers | In-process timers you write; durable ones need a scheduler you add | Native, on the Temporal Service | Act 3 |
-| Human-in-the-loop | Native: tool confirmation, long-running tools | Native: Signals, Updates, durable waits | Act 3 (both use ADK's tool confirmation) |
-| External side effects | At-least-once on resume, once per resuming host; needs idempotency | At-least-once inside an Activity; needs idempotency | Act 4 |
-| Distributing work across hosts | Deployment-dependent; leases are yours to add | Task queues and Workers; one Worker per task at a time | Act 1 |
-| Orchestrating more than the agent | Agent-oriented | General-purpose: escalations, payments, any code | Act 3 (`escalate_to_manager`) |
+| Resume after a process crash | Yes, when something calls `run_async(invocation_id=...)` | Automatic: any Worker polling the task queue | Scenarios 1, 2 and 4 |
+| Avoid repeating completed steps | For steps whose result event was written; parallel calls in one turn are written together, after the last returns | For Activities whose completion was recorded, each on its own | Scenario 4 |
+| Retries | Per node in ADK graph workflows; in-process `retry_options` on the Gemini model (off by default); varies by runtime | Per Activity, for model calls and tools alike: timeout, backoff, attempts, across restarts | Scenario 2; Scenario 4 (`attempt 2`) |
+| Durable timers | In-process timers you write; durable ones need a scheduler you add | Native, on the Temporal Service | Scenario 3 |
+| Human-in-the-loop | Native: tool confirmation, long-running tools | Native: Signals, Updates, durable waits | Scenario 3 (both use ADK's tool confirmation) |
+| External side effects | At-least-once on resume, once per resuming host; needs idempotency | At-least-once inside an Activity; needs idempotency | Scenario 4 |
+| Distributing work across hosts | Deployment-dependent; leases are yours to add | Task queues and Workers; one Worker per task at a time | Scenario 1 |
+| Orchestrating more than the agent | Agent-oriented | General-purpose: escalations, payments, any code | Scenario 3 (`escalate_to_manager`) |
 
 ADK is moving fast: graph workflows with node retry policies and human-in-the-loop handling in ADK 2.x, and Google's separately announced [Agent Executor](https://cloud.google.com/blog/products/ai-machine-learning/agent-executor-googles-distributed-agent-runtime) runtime, which targets resuming execution after outages. The useful question is not whether ADK is durable, but how much reliability comes from the agent framework and how much from the runtime around it. Agent Executor is a managed Google Cloud runtime and is not part of this local demo.
 
@@ -165,10 +165,10 @@ Temporal owns the lifecycle of the business process; ADK owns the agent's reason
 
 ### Questions worth asking any agent runtime
 
-1. **Crash consistency.** A tool performs an external side effect, then the process dies before the checkpoint is written. What happens? And when the model made several tool calls in one turn and some had finished? *(Act 4; the parallel case is in the tests.)*
-2. **Recovery ownership.** After a host dies, or a model call fails, what schedules the recovery? Does the application call resume itself? And where does a retry's state live while it backs off? *(Acts 1 and 2.)*
+1. **Crash consistency.** A tool performs an external side effect, then the process dies before the checkpoint is written. What happens? And when the model made several tool calls in one turn and some had finished? *(Scenario 4; the parallel case is in the tests.)*
+2. **Recovery ownership.** After a host dies, or a model call fails, what schedules the recovery? Does the application call resume itself? And where does a retry's state live while it backs off? *(Scenarios 1 and 2.)*
 3. **Concurrent recovery.** What stops two replicas from resuming the same execution at once? *(Not staged; see the tests.)*
-4. **Durable waiting.** Can an agent wait 30 days for an event, without holding compute or relying on a custom scheduler, and act when a deadline passes? *(Act 3.)*
+4. **Durable waiting.** Can an agent wait 30 days for an event, without holding compute or relying on a custom scheduler, and act when a deadline passes? *(Scenario 3.)*
 5. **Execution guarantees.** Which operations are replayed, which are retried, and which are guaranteed not to repeat after a recorded completion?
 6. **Versioning.** What happens to a three-week execution when the agent's graph, prompts or tools change?
 7. **Integrity of what gets re-run.** Who can change a stored tool call's arguments before a resume runs it?
@@ -197,7 +197,7 @@ Temporal owns the lifecycle of the business process; ADK owns the agent's reason
 
 Two GitHub Actions workflows:
 
-- [ci.yml](.github/workflows/ci.yml) runs the unit and act tests (real processes, a real Temporal dev server) and builds the container image, on every push and pull request.
+- [ci.yml](.github/workflows/ci.yml) runs the unit and scenario tests (real processes, a real Temporal dev server) and builds the container image, on every push and pull request.
 - [deploy.yml](.github/workflows/deploy.yml) deploys `main` to Fly.io once CI has passed on it, with `flyctl deploy --remote-only --ha=false`. It needs a `FLY_API_TOKEN` repository secret (`fly tokens create deploy`).
 
 The [Dockerfile](Dockerfile) runs the whole demo in one container, exactly as `make demo` does: the API starts the business systems, the ADK hosts, the Workers and a Temporal dev server. [fly.toml](fly.toml) keeps it to one machine, because the demo's state lives in that machine's processes. The Temporal Web UI is on port 8233 of the same host.
@@ -205,7 +205,7 @@ The [Dockerfile](Dockerfile) runs the whole demo in one container, exactly as `m
 ## Limits
 
 - The fake model makes the runs repeatable. It plays the role of a model following `INSTRUCTION`, not of model reasoning.
-- The ADK host is a minimal FastAPI wrapper around `Runner`, standing in for `adk api_server` or a managed runtime. With a managed runtime, the recovery and deadline gaps in Acts 1 and 3 are that runtime's responsibility; ask how it handles them.
-- The model outage (Act 2) is simulated by the fake model, which honours `retry_options` the way `Gemini` does (attempts and exponential backoff, without jitter). With `REFUND_DEMO_MODEL` set to a Gemini model, the ADK side passes the same `retry_options` to `Gemini`.
+- The ADK host is a minimal FastAPI wrapper around `Runner`, standing in for `adk api_server` or a managed runtime. With a managed runtime, the recovery and deadline gaps in Scenarios 1 and 3 are that runtime's responsibility; ask how it handles them.
+- The model outage (Scenario 2) is simulated by the fake model, which honours `retry_options` the way `Gemini` does (attempts and exponential backoff, without jitter). With `REFUND_DEMO_MODEL` set to a Gemini model, the ADK side passes the same `retry_options` to `Gemini`.
 - Fault injection uses ADK's `before_tool_callback` / `after_tool_callback`, and calls inside `refund_payment`. On the Temporal side the callbacks run in Workflow code, where `faults.py` steps outside the sandbox and never fires during replay.
 - No authentication anywhere. The public deployment is open: anyone with the URL can start runs, kill processes and reset, and every viewer shares the same demo. Machines stop when idle and start on the next request, from a clean state.

@@ -41,6 +41,10 @@ ADK_RUN_ROUTE = Snippet("POST /runs", "adk_side/host.py", '    @app.post("/runs"
 ADK_CONFIRM_ROUTE = Snippet("POST /confirm", "adk_side/host.py", '    @app.post("/confirm")', "        return")
 ADK_RESUME_ROUTE = Snippet("POST /resume", "adk_side/host.py", '    @app.post("/resume")', "        return")
 ADK_RECOVER_ROUTE = Snippet("POST /recover (each host runs the scan)", "adk_side/host.py", '    @app.post("/recover")', "        return")
+ADK_DRIVE = Snippet("drive: where runner.run_async runs (a new run, or a resume with invocation_id)", "adk_side/host.py",
+                    "    async def drive(", "        await start_deadline_timer(")
+ADK_DEADLINE_TIMER = Snippet("start_deadline_timer (an asyncio task in this host)", "adk_side/host.py",
+                             "    async def start_deadline_timer(", "        task.add_done_callback(tasks.discard)")
 ADK_MODEL_RETRY = Snippet("MODEL_RETRY (in-process model retries)", "adk_side/host.py", "MODEL_RETRY = ", "                                     http_status_codes")
 TEMPORAL_AGENT = Snippet("AGENT (model and tools as Activities)", "temporal_side/workflow.py", "AGENT = build_agent(", ")")
 TOOL_OPTIONS = Snippet("TOOL_OPTIONS (timeouts and retries)", "temporal_side/workflow.py", "TOOL_OPTIONS = ", ")")
@@ -51,14 +55,14 @@ SOURCES: dict[str, dict[str, list[Part]]] = {
     "adk": {
         "request": [ADK_RUN_ROUTE, host.request_message],
         "decide": [INSTRUCTION, ADK_MODEL_RETRY, host.make_model, fake_llm.FakeRefundLlm.generate_content_async],
-        "approval": [agent.needs_manager_approval, ADK_CONFIRM_ROUTE],
+        "approval": [agent.needs_manager_approval, ADK_DEADLINE_TIMER, ADK_CONFIRM_ROUTE],
         "refund_payment": [tools.refund_payment],
         "record_refund": [tools.record_refund],
         "notify_customer": [tools.notify_customer],
         "agent": [agent.build_agent, host.make_runner],
-        "runtime": [host.make_runner, ADK_RUN_ROUTE, ADK_RESUME_ROUTE],
+        "runtime": [host.make_runner, ADK_RUN_ROUTE, ADK_RESUME_ROUTE, ADK_DRIVE],
         "persistence": [host.make_runner, recovery.invocation_status],
-        "recovery": [recovery.find_unfinished_invocations, recovery.invocation_status, ADK_RECOVER_ROUTE],
+        "recovery": [recovery.find_unfinished_invocations, recovery.invocation_status, ADK_RECOVER_ROUTE, ADK_DRIVE],
         "crash": [faults.maybe_crash, agent._after_tool, agent._before_tool],
     },
     "temporal": {
