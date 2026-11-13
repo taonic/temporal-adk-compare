@@ -86,17 +86,11 @@
   .toggle.on { border-color: color-mix(in srgb, var(--ok) 50%, var(--border)); }
   .toggle.warn-chip .dot { background: var(--warn); }
   .toggle.warn-chip { border-color: color-mix(in srgb, var(--warn) 60%, var(--border)); color: var(--warn); }
-  .menu { position: relative; }
-  .menu > summary { list-style: none; font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--border);
-                    background: var(--panel); cursor: pointer; user-select: none; color: var(--text); }
-  .menu > summary::-webkit-details-marker { display: none; }
-  .menu > summary:hover, .menu[open] > summary { border-color: var(--accent); }
-  .menu-body { position: absolute; right: 0; top: calc(100% + 6px); z-index: 10; display: grid; gap: 6px; min-width: 230px;
-               padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel);
-               box-shadow: 0 8px 24px rgba(10, 14, 22, .14); }
-  .menu-body button { text-align: left; }
-  .menu-body .menu-note { font-size: 11px; color: var(--muted); }
-  .menu-body hr { border: 0; border-top: 1px solid var(--border); margin: 2px 0; width: 100%; }
+  .cloud { font-size: 12px; font-weight: 600; padding: 4px 11px; border-radius: 999px; text-decoration: none; color: var(--accent);
+           border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); }
+  .cloud:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+  .gh { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; color: var(--muted); }
+  .gh:hover { color: var(--text); background: color-mix(in srgb, var(--text) 8%, transparent); }
 
   .wrap { padding: 14px 20px 30px; display: grid; gap: 14px; }
   @media (max-width: 700px) { .wrap { padding: 12px 16px 30px; } header { padding: 10px 16px; } }
@@ -733,41 +727,24 @@ function statusText(side, p) {
 }
 
 // ---- Rendering: header controls ------------------------------------------------
+// The scenario player drives the demo, so the header holds only the model outage (while one runs:
+// click to end it) and a link to the source.
+const REPO = "https://github.com/taonic/temporal-adk-compare";
+// Tagged with this demo's campaign, like the closing "Ask an expert" link.
+const GET_CLOUD = "https://temporal.io/get-cloud?utm_source=temporal_blog&utm_medium=referral&utm_campaign=resumable_vs_durable_agent_demo";
+const GITHUB_MARK = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z";
 function renderControls() {
-  const root = document.getElementById("controls");
-  const st = state.settings;
-  const tog = (on, label, title, fn) => h("button", { class: `toggle ${on ? "on" : ""}`, title, onclick: fn, "aria-pressed": String(on) },
-    h("span", { class: "dot" }), `${label}: ${on ? "on" : "off"}`);
-  // Manual controls live in a menu: the scenario player normally drives the demo.
-  const act = (fn) => () => { menuOpen = false; fn().then(refresh); };
   const outage = state.model_outage_left > 0;
-  patch(root, ...[
-    tog(st.use_idempotency_key, "Idempotency key", "Tools send Idempotency-Key: <run>:<function call id> (new runs)",
-        () => post("/api/settings", { use_idempotency_key: !st.use_idempotency_key }).then(refresh)),
-    tog(st.auto_restart, "Auto-restart", "The supervisor restarts a dead process after 2s, like Kubernetes",
-        () => post("/api/settings", { auto_restart: !st.auto_restart }).then(refresh)),
+  patch(document.getElementById("controls"), ...[
     outage
       ? h("button", { class: "toggle on warn-chip", title: "Every model call fails with a 429 until the outage ends. Click to end it now.",
                       onclick: () => post("/api/model-outage", { seconds: 0 }).then(refresh) }, h("span", { class: "dot" }), `Model outage: ${Math.ceil(state.model_outage_left)}s left`)
       : null,
-    h("details", { class: "menu", open: menuOpen, ontoggle: (e) => { menuOpen = e.target.open; } },
-      h("summary", {}, "Manual ▾"),
-      h("div", { class: "menu-body" },
-        h("div", { class: "menu-note" }, "Start a run on both sides"),
-        h("button", { onclick: act(() => post("/api/runs", {})), title: "Start a $500 refund on both sides" }, "Refund $500"),
-        h("button", { onclick: act(() => post("/api/runs", { approval: true })), title: "With the approval policy: over $250 needs a manager within 20s" }, "Refund $500 + approval"),
-        h("button", { onclick: act(() => post("/api/runs", { line_items: [20000, 15000, 15000] })), title: "Three line items: the model asks for three refunds in one turn" }, "Refund 3 items"),
-        h("hr"),
-        outage ? null : h("button", { title: "Every model call fails with a 429 for 20s, on both sides", onclick: act(() => post("/api/model-outage", { seconds: 20 })) }, "Model outage 20s"),
-        h("button", { onclick: act(() => post("/api/reset")) }, "Reset everything"),
-        h("hr"),
-        h("a", { href: state.temporal_ui, target: "_blank", rel: "noopener", style: "font-size:12px" }, "Temporal UI ↗"))),
+    h("a", { class: "cloud", href: GET_CLOUD, target: "_blank", rel: "noopener" }, "Try Temporal Cloud ↗"),
+    h("a", { class: "gh", href: REPO, target: "_blank", rel: "noopener", title: "The source on GitHub", "aria-label": "The source on GitHub" },
+      s("svg", { viewBox: "0 0 16 16", width: 20, height: 20, "aria-hidden": "true" }, s("path", { d: GITHUB_MARK, fill: "currentColor" }))),
   ].filter(Boolean));
 }
-let menuOpen = false;
-document.addEventListener("click", (e) => {
-  if (menuOpen && !e.target.closest(".menu")) { menuOpen = false; const m = document.querySelector(".menu"); if (m) m.open = false; }
-});
 
 // ---- Rendering: scenario player ----------------------------------------------
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;

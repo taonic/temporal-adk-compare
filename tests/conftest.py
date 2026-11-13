@@ -47,22 +47,29 @@ def api(tmp_path_factory):
         if time.time() > deadline or proc.poll() is not None:
             raise RuntimeError(f"API did not start; see {log.name}")
         time.sleep(0.3)
-    yield Api(client)
+    yield Api(client, Path(log.name))
     proc.terminate()
     proc.wait(10)
 
 
 class Api:
-    def __init__(self, client: httpx.Client) -> None:
+    def __init__(self, client: httpx.Client, log: Path) -> None:
         self.client = client
+        self.log = log
 
-    def post(self, path: str, body: dict | None = None) -> dict:
-        response = self.client.post(path, json=body or {})
-        response.raise_for_status()
+    def _ok(self, response: httpx.Response) -> dict:
+        """The JSON body; for an error, the API's own log tail, which holds its traceback."""
+        if response.is_error:
+            tail = "".join(self.log.read_text(errors="replace").splitlines(keepends=True)[-60:])
+            raise AssertionError(f"{response.request.method} {response.request.url.path} -> {response.status_code}: "
+                                 f"{response.text[:300]}\n--- api.log (last 60 lines) ---\n{tail}")
         return response.json()
 
+    def post(self, path: str, body: dict | None = None) -> dict:
+        return self._ok(self.client.post(path, json=body or {}))
+
     def state(self) -> dict:
-        return self.client.get("/api/state").json()
+        return self._ok(self.client.get("/api/state"))
 
     def wait(self, predicate, timeout: float = 45, what: str = "condition") -> dict:
         deadline = time.time() + timeout

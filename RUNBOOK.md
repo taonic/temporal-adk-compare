@@ -5,7 +5,7 @@ For whoever presents the demo. About 24 minutes for all four scenarios and the w
 ## Before the meeting
 
 1. `make clean && make demo`. The browser opens at <http://localhost:8400>.
-2. Check the header: **Idempotency key: off**, **Auto-restart: on**. Both columns show host or Worker A with a green dot.
+2. Both columns show host or Worker A with a green dot.
 3. Rehearse Scenarios 1 and 2 once. Each scenario starts with a reset, so a rehearsal leaves nothing behind.
 4. Open the Temporal UI (<http://localhost:8233>) in a second tab. Some audiences want to see a real Workflow history.
 5. Make the browser zoom fit both columns side by side with the player docked on the right (1440px wide or more). The player docks at 1200px and wider; narrower, it sits above the columns and shows only the current step.
@@ -21,7 +21,7 @@ For whoever presents the demo. About 24 minutes for all four scenarios and the w
 - **Autoplay** advances 6 seconds after each step's outcome arrives. Use it for a booth or a recording, not a conversation.
 - Click any node in either diagram: **Code** shows the source behind it, and **What's persisted** shows what this run recorded for it.
 - Each column's **Process log** is collapsed; its summary line shows the latest output. Click it to open the full log.
-- **Manual ▾** in the header starts a run by hand, starts a model outage, resets, and links to the Temporal UI. The player does all of this for you in the scenarios.
+- The header holds only a GitHub link (and, during an outage, the *Model outage* chip). The player drives everything else; the Temporal UI is linked from each Temporal column's event history.
 - A **⚡ crash point** marker on a column's flow shows where its process will die; the scenario arms it. Hover it for the exact place.
 
 ### Scenario 1 · Recovery: automatic vs on request (3 min)
@@ -60,7 +60,7 @@ Don't linger on the Temporal outage step: its outage lasts 30s, and once it ends
 | ADK: crash inside the tool | ADK *money moved, result NOT recorded* again | Now neither runtime can know the money moved. |
 | Resume ADK | ADK **$ moved ×2** | |
 | Temporal: same crash | Temporal `refund_payment` shows **attempt 2** after about 6s, then **$ moved ×2** | Be the first to say it: Temporal isn't exactly-once either. No runtime makes an external side effect exactly-once. |
-| ADK: key on, crash again | Header chip *Idempotency key: on* | The function call id is stable on both runtimes. |
+| ADK: key on, crash again | The step turns the key on; the ledger's *idempotency key* column fills in | The function call id is stable on both runtimes. |
 | Resume ADK | ADK **deduped ×1**; ledger row *duplicate request: original returned* | |
 | Temporal: same crash | Temporal **deduped ×1** | Recap the three differences in the caption. |
 
@@ -91,19 +91,19 @@ Content only: the runtime columns and the ledger are hidden.
 ## Resetting
 
 - Each scenario's first step resets everything: ledger cleared, crash points disarmed, model outage ended, only host A and Worker A running, auto-restart on, idempotency key off.
-- **Manual ▾ → Reset everything** does the same at any time.
+- Clicking a scenario's tab (the current one too) does the same at any time.
 - `make clean` wipes all state, including the dev server's Workflow histories. Restart `make demo` after it.
 
 ## If something goes wrong
 
 | Symptom | Fix |
 |---|---|
-| A step waits forever | Open both process logs. Use **Manual ▾ → Reset everything** and restart the scenario. |
+| A step waits forever | Open both process logs. Click the scenario's tab to reset the stage and start it again. |
 | `address already in use` on start | Another process is using port 8400, 8411, 8412 or 8420. Free the port, or set `API_PORT` and the other port variables from the README. |
 | The Temporal column says it can't reach the server | Another Temporal dev server may be holding port 7233 with a different namespace. Stop it, or point `TEMPORAL_ADDRESS` at it. |
 | A process shows *crashed* and won't come back | Auto-restart is off (Scenario 1 turns it off). Press its **start** button. |
 | The UI shows stale data | Reload the page. The API holds no refund state; everything is re-read on each poll. |
-| The header still says *Model outage* | Click the chip to end the outage, or use **Manual ▾ → Reset everything**. |
+| The header still says *Model outage* | Click the chip to end the outage, or click the scenario's tab to reset. |
 
 ## Questions you will get
 
