@@ -1,7 +1,7 @@
 """Runs a private copy of the whole demo stack, on its own ports, for the act tests.
 
-Needs a Temporal Server on localhost:7233 (`temporal server start-dev`); the
-API starts one itself if none is running.
+Needs the Temporal CLI: the API starts its own dev server on a private port (17233), with eager
+Workflow start and eager Activities on, so the tests never share a server with a running demo.
 """
 
 import os
@@ -22,6 +22,10 @@ TEST_ENV = {
     "BUSINESS_URL": "http://127.0.0.1:18320",
     "ADK_HOST_A_PORT": "18311",
     "ADK_HOST_B_PORT": "18312",
+    "WORKER_A_PORT": "18331",
+    "WORKER_B_PORT": "18332",
+    "TEMPORAL_ADDRESS": "localhost:17233",
+    "TEMPORAL_UI": "http://localhost:18233",
     "TASK_QUEUE": f"refunds-test-{secrets.token_hex(3)}",
     "FAKE_LLM_DELAY": "0.1",
     "BUSINESS_DELAY": "0.05",

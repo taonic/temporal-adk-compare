@@ -7,7 +7,7 @@ For whoever presents the demo. About 24 minutes for all four scenarios and the w
 1. `make clean && make demo`. The browser opens at <http://localhost:8400>.
 2. Both columns show host or Worker A with a green dot.
 3. Rehearse Scenarios 1 and 2 once. Each scenario starts with a reset, so a rehearsal leaves nothing behind.
-4. Open the Temporal UI (<http://localhost:8233>) in a second tab. Some audiences want to see a real Workflow history.
+4. Open the Temporal UI (<http://localhost:8243>) in a second tab. Some audiences want to see a real Workflow history.
 5. Make the browser zoom fit both columns side by side with the player docked on the right (1440px wide or more). The player docks at 1200px and wider; narrower, it sits above the columns and shows only the current step.
 6. If you will use Gemini instead of the fake model, rehearse with it. A real model may word its tool calls differently, and the captions assume the fake model's steps.
 
@@ -28,11 +28,11 @@ For whoever presents the demo. About 24 minutes for all four scenarios and the w
 
 | Step | Point at | Say |
 |---|---|---|
-| Set the stage | The two stack lines under the column titles; ADK hosts A and B and Worker A running, auto-restart **off** | Same `agent.py` on both sides. ADK is configured properly: resumability on, a persistent session database. ADK's spare is ready; Temporal's starts once Worker A is gone. |
+| Set the stage | The two stack lines under the column titles; ADK hosts A and B and Workers A and B running, auto-restart **off** | Same `agent.py` on both sides. ADK is configured properly: resumability on, a persistent session database. Each side has a spare running beside A; each run starts on A. |
 | ADK: host A dies | Host A *crashed*, host B running; chip *unfinished · nobody working on it* | Click ADK's *Who resumes?* panel to show `recovery.py`. |
 | Run the recovery scan | Next waits: **you** click *Run recovery scan + resume* in the ADK column (it pulses). ADK completes, still one refund | ADK resumability works. The question is who owns triggering it: here, you did. The resumes in Scenarios 2 and 3 work the same way. |
-| Temporal: Worker A dies | *by Worker A* on `refund_payment` and `record_refund`; no Worker running | The Workflow waits on the Temporal Server. |
-| Start Worker B | Temporal completes within about 5s; `notify_customer` reads *by Worker B*, the earlier steps still *by Worker A* | Nobody called anything: the next Worker on the task queue took it. |
+| Temporal: Worker A dies | *by Worker A* on every step so far, with Worker B idle beside it | Temporal keeps a run on the Worker that started it: an eager start, its sticky queue, eager Activities. |
+| Worker B picks it up | Temporal completes within about 5s; `notify_customer` reads *by Worker B*, the earlier steps still *by Worker A* | Nobody called anything: once Worker A's task timed out, Worker B, already polling, took it. |
 
 The `StaleSessionError` mentioned in the caption really happened while building this demo: a test resumed an invocation that was still running. It's a good example of why "find unfinished invocations" is harder than it looks.
 
@@ -90,7 +90,7 @@ Content only: the runtime columns and the ledger are hidden.
 
 ## Resetting
 
-- Each scenario's first step resets everything: ledger cleared, crash points disarmed, model outage ended, only host A and Worker A running, auto-restart on, idempotency key off.
+- Each scenario's first step resets everything: ledger cleared, crash points disarmed, model outage ended, only host A and Worker A running (in Scenario 1, host B and Worker B too, from its intro on), auto-restart on, idempotency key off.
 - Clicking a scenario's tab (the current one too) does the same at any time.
 - `make clean` wipes all state, including the dev server's Workflow histories. Restart `make demo` after it.
 
@@ -100,7 +100,7 @@ Content only: the runtime columns and the ledger are hidden.
 |---|---|
 | A step waits forever | Open both process logs. Click the scenario's tab to reset the stage and start it again. |
 | `address already in use` on start | Another process is using port 8400, 8411, 8412 or 8420. Free the port, or set `API_PORT` and the other port variables from the README. |
-| The Temporal column says it can't reach the server | Another Temporal dev server may be holding port 7233 with a different namespace. Stop it, or point `TEMPORAL_ADDRESS` at it. |
+| The Temporal column says it can't reach the server | Something else may hold port 7243. Stop it, or run `make demo TEMPORAL_ADDRESS=localhost:<port> TEMPORAL_UI=http://localhost:<port + 1000>`. |
 | A process shows *crashed* and won't come back | Auto-restart is off (Scenario 1 turns it off). Press its **start** button. |
 | The UI shows stale data | Reload the page. The API holds no refund state; everything is re-read on each poll. |
 | The header still says *Model outage* | Click the chip to end the outage, or click the scenario's tab to reset. |

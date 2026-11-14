@@ -22,20 +22,20 @@
       },
       "steps": [
         {
-          "title": "Set the stage: two of everything, no supervisor",
-          "caption": "Both columns run the same agent with three tools. Left: ADK with resumability and a persistent session DB. Right: the same agent in a Temporal Workflow, where the ADK plugin makes every model and tool call an Activity.<span class=\"code-links\">Read the code: <a href=\"#adk/agent\" data-code=\"adk/agent\">the ADK setup</a><a href=\"#temporal/agent\" data-code=\"temporal/agent\">the Temporal setup</a></span><br>ADK has a spare, host B. Temporal's spare, Worker B, starts after Worker A dies. Auto-restart is off. Both sides crash just before emailing the customer: what continues the work?",
+          "title": "Set the stage: two of everything, side by side",
+          "caption": "Both columns run the same agent with three tools. Left: ADK with resumability and a persistent session DB. Right: the same agent in a Temporal Workflow, where the ADK plugin makes every model and tool call an Activity.<span class=\"code-links\">Read the code: <a href=\"#adk/agent\" data-code=\"adk/agent\">the ADK setup</a><a href=\"#temporal/agent\" data-code=\"temporal/agent\">the Temporal setup</a></span><br>Two hosts and two Workers, side by side; each run starts on A. Auto-restart is off. Both sides crash just before emailing the customer: what continues the work?",
           "actions": [
             {
-              "post": "/api/reset"
+              "post": "/api/reset",
+              "body": {
+                "spares": true
+              }
             },
             {
               "post": "/api/settings",
               "body": {
                 "auto_restart": false
               }
-            },
-            {
-              "post": "/api/processes/adk-b/start"
             },
             {
               "post": "/api/faults",
@@ -84,7 +84,7 @@
         {
           "title": "The same refund on Temporal: Worker A dies before the email",
           "side": "temporal",
-          "caption": "Same request, same crash point. Worker A refunds and records the refund (<i>by Worker A</i> on each step), then dies just before <a href=\"#temporal/notify_customer\" data-code=\"temporal/notify_customer\"><code>notify_customer</code></a>.<br><br>No Worker is running now. The Workflow is not lost: its history and its next task wait on the Temporal Server.",
+          "caption": "Same request, same crash point. Worker B sits idle beside Worker A, yet every step reads <i>by Worker A</i>: Worker A started the Workflow eagerly, its sticky queue got the next Workflow Tasks, and its Activities ran eagerly. Then Worker A dies just before <a href=\"#temporal/notify_customer\" data-code=\"temporal/notify_customer\"><code>notify_customer</code></a>.<span class=\"code-links\">Temporal docs: <a class=\"doc\" href=\"https://docs.temporal.io/design-patterns/eager-workflow-start#:~:text=dispatching%20the%20first%20Workflow%20Task%20directly%20to%20a%20co%2Dlocated%20Worker\" target=\"_blank\" rel=\"noopener\">eager start ↗</a><a class=\"doc\" href=\"https://docs.temporal.io/sticky-execution#:~:text=directs%20Workflow%20Tasks%20to%20the%20same%20Worker\" target=\"_blank\" rel=\"noopener\">sticky execution ↗</a></span>",
           "actions": [
             {
               "post": "/api/runs/continue",
@@ -101,14 +101,10 @@
           ]
         },
         {
-          "title": "Start Worker B: it picks the work up",
+          "title": "Worker B picks the work up, by itself",
           "side": "temporal",
           "caption": "<mark class=\"strong\">Worker B picked it up</mark>: <code>WorkflowTaskTimedOut</code>, then <code>WorkflowTaskStarted</code> by worker-b, which replayed the history and sent the email. Earlier steps still read <i>by Worker A</i>: replay reused their results.<br><br><mark class=\"strong\">No scan, no lease, no resume call: the Temporal Server handed the work to the next Worker polling the task queue.</mark><span class=\"code-links\">Read more: <a class=\"doc\" href=\"https://docs.temporal.io/tasks#how-worker-processes-workflow-task:~:text=If%20a%20Worker%20crashes%20mid%2Dexecution%2C%20another%20Worker%20can%20pick%20up%20the%20Workflow%20Task\" target=\"_blank\" rel=\"noopener\">Temporal docs: How a Worker processes a Workflow Task ↗</a></span>",
-          "actions": [
-            {
-              "post": "/api/processes/worker-b/start"
-            }
-          ],
+          "actions": [],
           "waitFor": [
             "temporal_done"
           ],
@@ -118,7 +114,8 @@
           ]
         }
       ],
-      "tab": "1"
+      "tab": "1",
+      "spares": true
     },
     {
       "id": "act2",

@@ -1,10 +1,13 @@
 .PHONY: demo test test-fast e2e e2e-live clean
 
-# Starts the business systems, an ADK host and a Temporal Worker, plus a local
-# Temporal dev server if none is running on localhost:7233, then opens the UI.
+# Starts the business systems, an ADK host and a Temporal Worker, plus the demo's own Temporal
+# dev server on port 7243 (UI on 8243), then opens the UI. Its own, so it always has eager start
+# and eager Activities on: a dev server already running on 7233 is left alone.
+TEMPORAL_ADDRESS ?= localhost:7243
+TEMPORAL_UI ?= http://localhost:8243
 demo:
 	@(for i in $$(seq 1 60); do curl -sf localhost:8400/api/state >/dev/null && open http://localhost:8400 && exit; sleep 0.5; done) &
-	uv run python -m refund_demo.api
+	TEMPORAL_ADDRESS=$(TEMPORAL_ADDRESS) TEMPORAL_UI=$(TEMPORAL_UI) uv run python -m refund_demo.api
 
 # Every scenario, headless, against real processes and real crashes (about a minute).
 test:

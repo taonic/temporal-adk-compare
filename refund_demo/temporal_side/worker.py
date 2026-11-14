@@ -4,6 +4,14 @@ A Worker holds no state of its own. It polls the task queue, and when it
 picks up a Workflow it replays that Workflow's event history to rebuild where
 it was. That is why a crashed refund continues with no one asking: the next
 Worker to poll the queue picks it up.
+
+Where a run starts, and stays, is up to Temporal's task routing, not to luck:
+    - the API asks this Worker (POST /start) to start the Workflow with an eager start: the Server
+      hands its first Workflow Task straight back to the Worker that started it
+    - the Worker caches the Workflow, so its next Workflow Tasks go to this Worker's sticky queue
+    - each Activity it schedules on its own task queue is executed eagerly, by this Worker
+So a refund started on Worker A runs on Worker A, with Worker B idle beside it, until Worker A dies;
+then its tasks go back to the shared queue and Worker B takes them.
 """
 
 import argparse
@@ -12,6 +20,8 @@ from datetime import timedelta
 
 from typing import Any
 
+import uvicorn
+from fastapi import FastAPI
 from temporalio import activity
 from temporalio.client import Client
 from temporalio.google_adk import GoogleAdkPlugin
@@ -20,7 +30,7 @@ from temporalio.worker.workflow_sandbox import SandboxedWorkflowRunner, SandboxR
 
 from .. import config
 from . import activities
-from .workflow import RefundWorkflow
+from .workflow import RefundRequest, RefundWorkflow
 
 
 class _LogActivities(Interceptor):
@@ -65,7 +75,35 @@ async def main(name: str) -> None:
             "refund_demo.fake_llm", "refund_demo.temporal_side.activities", "httpx")),
     )
     print(f"[worker {name}] polling task queue '{config.TASK_QUEUE}'", flush=True)
-    await worker.run()
+    server = uvicorn.Server(uvicorn.Config(_control(client, name), host="127.0.0.1",
+                                           port=config.WORKER_PORTS[name], log_level="warning"))
+    # Either one ending ends the process: the supervisor restarts it whole, as a crash.
+    done, pending = await asyncio.wait([asyncio.create_task(worker.run()), asyncio.create_task(server.serve())],
+                                       return_when=asyncio.FIRST_COMPLETED)
+    for task in pending:
+        task.cancel()
+    for task in done:
+        task.result()
+
+
+def _control(client: Client, name: str) -> FastAPI:
+    """POST /start: start a refund's Workflow here, eagerly, so this Worker runs it."""
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+
+    @app.post("/start")
+    async def start(body: dict) -> dict:
+        handle = await client.start_workflow(
+            RefundWorkflow.run, RefundRequest(**body["request"]), id=body["workflow_id"],
+            task_queue=config.TASK_QUEUE, task_timeout=timedelta(seconds=4),
+            # Same client as this Worker: the Server returns the first Workflow Task in the response.
+            request_eager_start=True)
+        eager = bool(getattr(handle, "__temporal_eagerly_started", False))
+        print(f"[worker {name}] started {body['workflow_id']}"
+              + (" eagerly: its first Workflow Task came straight back to me" if eager
+                 else " (not eagerly: any Worker on the queue may take it)"), flush=True)
+        return {"eager": eager}
+
+    return app
 
 
 if __name__ == "__main__":

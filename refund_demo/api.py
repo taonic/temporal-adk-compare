@@ -8,6 +8,7 @@ the sources of truth, and /api/state reads all three on every poll.
 """
 
 import asyncio
+import dataclasses
 import json
 import re
 import secrets
@@ -75,6 +76,12 @@ async def _connect_temporal() -> Client:
     # No Temporal Server yet: start a local dev server, owned by this API.
     proc = ManagedProcess("temporal", "Temporal dev server", "system",
                           ["temporal", "server", "start-dev", "--db-filename", str(config.VAR / "temporal.db"),
+                           "--port", config.TEMPORAL_ADDRESS.rsplit(":", 1)[1],
+                           "--ui-port", config.TEMPORAL_UI.rstrip("/").rsplit(":", 1)[1],
+                           # A run starts on the Worker that starts it, and its Activities run there:
+                           # eager Workflow start and eager Activity execution, both off by default.
+                           "--dynamic-config-value", "system.enableEagerWorkflowStart=true",
+                           "--dynamic-config-value", "system.enableActivityEagerExecution=true",
                            "--log-level", "error", *(["--ui-ip", config.TEMPORAL_UI_IP] if config.TEMPORAL_UI_IP else [])])
     demo.supervisor.processes["temporal"] = proc
     await demo.supervisor.start("temporal")
@@ -198,10 +205,18 @@ async def _start_on(side: str) -> str:
         await _post(f"{_host_url(host)}/runs", {**request.__dict__})
         where = f"ADK host {host.upper()}"
     else:
-        await demo.client.start_workflow(
-            RefundWorkflow.run, request, id=demo.run["workflow_id"], task_queue=config.TASK_QUEUE,
-            task_timeout=timedelta(seconds=4))
-        where = f"Temporal task queue '{config.TASK_QUEUE}'"
+        worker = _live_worker()
+        if worker is not None:
+            # Worker A starts it, eagerly: the first Workflow Task comes straight back to it, and the
+            # sticky queue and eager Activities keep the run there until Worker A dies.
+            started = await _post(f"http://127.0.0.1:{config.WORKER_PORTS[worker]}/start",
+                                  {"request": dataclasses.asdict(request), "workflow_id": demo.run["workflow_id"]})
+            where = f"Worker {worker.upper()}" + (", eagerly" if started.get("eager") else f" (task queue '{config.TASK_QUEUE}')")
+        else:  # no Worker running: the task queue holds it until one polls
+            await demo.client.start_workflow(
+                RefundWorkflow.run, request, id=demo.run["workflow_id"], task_queue=config.TASK_QUEUE,
+                task_timeout=timedelta(seconds=4))
+            where = f"Temporal task queue '{config.TASK_QUEUE}'"
     demo.run["started"][side] = time.time()
     return where
 
@@ -315,18 +330,25 @@ async def approve(body: Decision):
     return {"ok": True}
 
 
+class Reset(BaseModel):
+    # Scenario 1 plays with two hosts and two Workers side by side, from its intro on.
+    spares: bool = False
+
+
 @app.post("/api/reset")
-async def reset():
-    """A clean stage: one host and one Worker, nothing armed, empty ledger."""
+async def reset(body: Reset | None = None):
+    """A clean stage: host A and Worker A (with spares: B too), nothing armed, empty ledger."""
+    spares = bool(body and body.spares)
     # The previous run's Workflow stops too, so it can't go on moving money after the reset.
     if demo.run and "temporal" in demo.run["started"]:
         try:
             await demo.client.get_workflow_handle(demo.run["workflow_id"]).terminate("demo reset")
         except RPCError:
             pass  # already closed
-    for key in ("adk-b", "worker-b"):
-        await demo.supervisor.stop(key)
-    for key in ("business", "adk-a", "worker-a"):
+    if not spares:
+        for key in ("adk-b", "worker-b"):
+            await demo.supervisor.stop(key)
+    for key in ("business", "adk-a", "worker-a", *(("adk-b", "worker-b") if spares else ())):
         proc = demo.supervisor.processes[key]
         if proc.state != "running":
             await demo.supervisor.start(key)
@@ -412,6 +434,13 @@ def _adk_retrying() -> dict | None:
         if match and ts >= (proc.started_at or 0):
             return {"host": proc.label, "attempt": int(match[1]), "attempts": int(match[2]),
                     "delay": int(match[3]), "ts": ts}
+    return None
+
+
+def _live_worker() -> str | None:
+    for name in ("a", "b"):
+        if demo.supervisor.processes[f"worker-{name}"].state == "running":
+            return name
     return None
 
 

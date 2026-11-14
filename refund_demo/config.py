@@ -17,6 +17,10 @@ BUSINESS_PORT = int(os.environ.get("BUSINESS_PORT", 8420))
 # One port per ADK host instance: host "a" -> 8411, host "b" -> 8412.
 ADK_HOST_PORTS = {"a": int(os.environ.get("ADK_HOST_A_PORT", 8411)),
                   "b": int(os.environ.get("ADK_HOST_B_PORT", 8412))}
+# Each Temporal Worker also listens here, so the API can ask Worker A itself to start a run: an
+# eager start, whose first Workflow Task goes straight to the Worker that started it.
+WORKER_PORTS = {"a": int(os.environ.get("WORKER_A_PORT", 8431)),
+                "b": int(os.environ.get("WORKER_B_PORT", 8432))}
 
 BUSINESS_URL = os.environ.get("BUSINESS_URL", f"http://127.0.0.1:{BUSINESS_PORT}")
 

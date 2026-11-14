@@ -62,10 +62,14 @@ def test_act3_crash_inside_tool_needs_idempotency_on_both(api, use_key):
 def test_act1_nobody_resumes_adk(api):
     """A second ADK host sits idle next to the unfinished invocation; a second Worker just continues.
 
-    Played as the act plays it: the run starts on ADK alone, then the same run on Temporal.
+    Played as the act plays it: the run starts on ADK alone, then the same run on Temporal. Two hosts
+    and two Workers run side by side from the start, and each run stays on A until A dies: ADK's
+    because the API sends it to host A, Temporal's because Worker A starts it eagerly and its sticky
+    queue and eager Activities keep it there.
     """
     api.post("/api/settings", {"auto_restart": False})
     api.post("/api/processes/adk-b/start")
+    api.post("/api/processes/worker-b/start")
     api.post("/api/faults", {"side": "both", "point": "before_notify"})
     run = api.post("/api/runs", {"side": "adk"})
     assert list(run["started"]) == ["adk"]
@@ -83,17 +87,22 @@ def test_act1_nobody_resumes_adk(api):
     assert table(state, "notifications", "adk") == 1
     assert refunds(state, "adk") == 1, "resuming after a crash before notify does not repeat the refund"
 
-    # Worker B starts once Worker A is gone, so every step says which Worker did it.
+    # Worker B is up, idle, the whole time: Temporal keeps the run on Worker A until it dies.
     run = api.post("/api/runs/continue", {"side": "temporal"})
     assert run["run_id"] == state["run"]["run_id"] and set(run["started"]) == {"adk", "temporal"}
-    api.wait(lambda s: proc_state(s, "worker-a") == "crashed", what="Worker A to crash")
-    api.post("/api/processes/worker-b/start")
-    state = api.wait(TEMPORAL_DONE, what="Worker B to finish the refund")
+    state = api.wait(TEMPORAL_DONE, what="Worker B to finish the refund after Worker A dies")
+    assert proc_state(state, "worker-a") == "crashed" and proc_state(state, "worker-b") == "running"
+    assert any(l["proc"] == "Worker A" and "eagerly: its first Workflow Task came straight back to me" in l["line"]
+               for l in state["logs"]["temporal"]), "Worker A started the Workflow eagerly"
     assert table(state, "notifications", "temporal") == 1
     assert refunds(state, "temporal") == 1
-    completed_by = {e["activity"]: e["by"] for e in state["temporal"]["history"] if e["type"] == "ActivityTaskCompleted"}
-    assert (completed_by["refund_payment"], completed_by["record_refund"], completed_by["notify_customer"]) == \
-        ("worker-a", "worker-a", "worker-b"), "replay keeps who completed each Activity"
+    completed_by = {}  # each Activity's first completion: the model is called again after the email
+    for e in state["temporal"]["history"]:
+        if e["type"] == "ActivityTaskCompleted":
+            completed_by.setdefault(e["activity"], e["by"])
+    assert (completed_by["invoke_model"], completed_by["refund_payment"], completed_by["record_refund"],
+            completed_by["notify_customer"]) == ("worker-a", "worker-a", "worker-a", "worker-b"), \
+        "everything before the crash ran on Worker A (eager start, sticky queue, eager Activities); the rest on B"
     # ADK's events carry the host that wrote them: the refund on host A, the email after the resume on B.
     hosts = {r["name"]: e["host"] for e in state["adk"]["events"] for r in e["responses"]}
     assert (hosts["refund_payment"], hosts["notify_customer"]) == ("host-a", "host-b")
