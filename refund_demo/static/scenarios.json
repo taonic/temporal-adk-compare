@@ -84,7 +84,7 @@
         {
           "title": "The same refund on Temporal: Worker A dies before the email",
           "side": "temporal",
-          "caption": "Same request, same crash point. Worker B sits idle beside Worker A, yet every step reads <i>by Worker A</i>: Worker A started the Workflow eagerly, its sticky queue got the next Workflow Tasks, and its Activities ran eagerly. Then Worker A dies just before <a href=\"#temporal/notify_customer\" data-code=\"temporal/notify_customer\"><code>notify_customer</code></a>.<span class=\"code-links\">Temporal docs: <a class=\"doc\" href=\"https://docs.temporal.io/design-patterns/eager-workflow-start#:~:text=dispatching%20the%20first%20Workflow%20Task%20directly%20to%20a%20co%2Dlocated%20Worker\" target=\"_blank\" rel=\"noopener\">eager start ↗</a><a class=\"doc\" href=\"https://docs.temporal.io/sticky-execution#:~:text=directs%20Workflow%20Tasks%20to%20the%20same%20Worker\" target=\"_blank\" rel=\"noopener\">sticky execution ↗</a></span>",
+          "caption": "Same request, same crash point. Worker B sits idle beside Worker A, yet every step reads <i>by Worker A</i>: Worker A started the Workflow eagerly, its sticky queue got the next Workflow Tasks, and its Activities ran eagerly. Then Worker A dies just before <a href=\"#temporal/notify_customer\" data-code=\"temporal/notify_customer\"><code>notify_customer</code></a>.",
           "actions": [
             {
               "post": "/api/runs/continue",
