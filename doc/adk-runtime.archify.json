@@ -1,0 +1,130 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Resumable agent: plain ADK",
+    "output": "doc/adk-runtime.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "recovery",
+      "type": "security",
+      "label": "Your recovery code",
+      "sublabel": "scan, then resume by ID",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "adk-api",
+      "type": "external",
+      "label": "Business API",
+      "sublabel": "a refund request",
+      "pos": [
+        340,
+        40
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "hosts",
+      "type": "backend",
+      "label": "ADK hosts A, B",
+      "sublabel": "agent.py · retries, timers in memory",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "sessions",
+      "type": "database",
+      "label": "Session DB",
+      "sublabel": "events, after each step",
+      "pos": [
+        340,
+        360
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "biz",
+      "type": "external",
+      "label": "Business systems",
+      "sublabel": "payments, orders, email",
+      "pos": [
+        40,
+        520
+      ],
+      "size": [
+        240,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Resumable agent: plain ADK",
+      "wraps": [
+        "hosts",
+        "sessions"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "adk-resume",
+      "from": "recovery",
+      "to": "hosts",
+      "label": "resume by ID",
+      "variant": "dashed"
+    },
+    {
+      "id": "adk-run",
+      "from": "adk-api",
+      "to": "hosts",
+      "label": "run",
+      "variant": "emphasis"
+    },
+    {
+      "id": "adk-persist",
+      "from": "hosts",
+      "to": "sessions",
+      "label": "append events"
+    },
+    {
+      "id": "adk-tools",
+      "from": "hosts",
+      "to": "biz",
+      "label": "tools (HTTP)"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "Who resumes after a crash",
+      "items": [
+        "Your recovery code: it finds unfinished invocations and resumes them by ID",
+        "Retries and timers live in the host's memory"
+      ]
+    }
+  ]
+}

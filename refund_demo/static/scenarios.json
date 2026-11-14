@@ -1,6 +1,30 @@
 {
   "acts": [
     {
+      "id": "overview",
+      "title": "Overview: the same agent, two runtimes",
+      "short": "Overview",
+      "tab": "Overview",
+      "contentOnly": true,
+      "proves": [],
+      "steps": [
+        {
+          "title": "What each runtime claims",
+          "caption": "The same <a href=\"#adk/agent\" data-code=\"adk/agent\"><code>agent.py</code></a> on both sides. What each runtime promises, in its own docs' words, and how each is built.<div class=\"duo\"><section class=\"duo-col adk\"><p class=\"who\">Google ADK</p><p class=\"claim\">A <b>resumable agent</b>: the host saves the session's events, and <mark class=\"weak\">your code</mark> finds an unfinished invocation and resumes it by ID.</p><p class=\"src\">Source: <a class=\"ext\" href=\"https://adk.dev/runtime/resume/#:~:text=When%20an%20ADK%20workflow%20stops%20execution%20you%20can%20resume%20the%20workflow%20using%20a%20command%20containing%20the%20Invocation%20ID%20for%20the%20workflow%20instance\" target=\"_blank\" rel=\"noopener\">ADK docs: Resume stopped agents ↗</a></p></section><section class=\"duo-col temporal\"><p class=\"who\">Temporal</p><p class=\"claim\">A <b>durable agent</b>: the same agent in a Workflow; <mark class=\"strong\">the Temporal Server</mark> keeps its history and hands the work to any Worker.</p><p class=\"src\">Source: <a class=\"ext\" href=\"https://docs.temporal.io/temporal#:~:text=Durable%20Execution%20in%20the%20context%20of%20Temporal,crashes%2C%20or%20server%20outages\" target=\"_blank\" rel=\"noopener\">Temporal docs: What is Temporal? · Durable Execution ↗</a></p></section></div>",
+          "actions": [],
+          "focus": []
+        },
+        {
+          "title": "What each runtime claims",
+          "caption": "The same <a href=\"#adk/agent\" data-code=\"adk/agent\"><code>agent.py</code></a> on both sides. What each runtime promises, in its own docs' words, and how each is built.<div class=\"duo\"><section class=\"duo-col adk\"><p class=\"who\">Google ADK</p><p class=\"claim\">A <b>resumable agent</b>: the host saves the session's events, and <mark class=\"weak\">your code</mark> finds an unfinished invocation and resumes it by ID.</p><p class=\"src\">Source: <a class=\"ext\" href=\"https://adk.dev/runtime/resume/#:~:text=When%20an%20ADK%20workflow%20stops%20execution%20you%20can%20resume%20the%20workflow%20using%20a%20command%20containing%20the%20Invocation%20ID%20for%20the%20workflow%20instance\" target=\"_blank\" rel=\"noopener\">ADK docs: Resume stopped agents ↗</a></p><iframe class=\"duo-frame\" src=\"/static/diagrams/adk-runtime.html\" title=\"Plain ADK architecture, interactive\" loading=\"lazy\" onload=\"duoFrame(this)\"></iframe></section><section class=\"duo-col temporal\"><p class=\"who\">Temporal</p><p class=\"claim\">A <b>durable agent</b>: the same agent in a Workflow; <mark class=\"strong\">the Temporal Server</mark> keeps its history and hands the work to any Worker.</p><p class=\"src\">Source: <a class=\"ext\" href=\"https://docs.temporal.io/temporal#:~:text=Durable%20Execution%20in%20the%20context%20of%20Temporal,crashes%2C%20or%20server%20outages\" target=\"_blank\" rel=\"noopener\">Temporal docs: What is Temporal? · Durable Execution ↗</a></p><iframe class=\"duo-frame\" src=\"/static/diagrams/temporal-runtime.html\" title=\"Temporal + ADK architecture, interactive\" loading=\"lazy\" onload=\"duoFrame(this)\"></iframe></section></div><p class=\"duo-hint\">Live diagrams: hover or click a box to trace it; zoom and trace routes with the controls.</p>",
+          "actions": [],
+          "focus": [],
+          "continues": true
+        }
+      ],
+      "intro": "<p style=\"margin:0 0 8px\">One refund agent, run twice side by side: on plain ADK, and on Temporal through the ADK plugin. Then real failures: processes killed with <code>kill -9</code>, a model outage, a deadline. About 25 minutes in all:</p><ul class=\"agenda\"><li><b>Overview</b> <span>1 min</span> what each runtime claims, and how each is built</li><li><b>Scenario 1 · Recovery</b> <span>3 min</span> a host dies before emailing the customer: who resumes the refund?</li><li><b>Scenario 2 · Retries</b> <span>4 min</span> the model is down, and the host dies while it retries</li><li><b>Scenario 3 · Tool results</b> <span>7 min</span> a crash right after the refund: does the money move twice?</li><li><b>Scenario 4 · Timers</b> <span>5 min</span> a manager approval deadline passes while every process is down</li><li><b>Wrap-up</b> <span>3 min</span> the results in one table, and when to use which</li></ul><p style=\"margin:8px 0 0\">Each scenario plays ADK first, then the same refund on Temporal. Press Start (or →).</p>"
+    },
+    {
       "id": "act1",
       "title": "Scenario 1 · Recovery: automatic vs on request",
       "short": "Scenario 1",

@@ -137,6 +137,8 @@
 
   /* The guide's message. */
   .guide-msg { display: flex; align-items: flex-start; gap: 10px; animation: guide-in 220ms ease-out; }
+  .guide-msg.continued { animation: none; }
+  .caption .duo-hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
   @keyframes guide-in { from { opacity: 0; transform: translateY(6px); } }
   .guide-avatar { display: inline-grid; place-items: center; flex: none; width: 28px; height: 28px; margin-top: 2px; border-radius: 8px;
                   background: linear-gradient(135deg, var(--accent), #a855f7); color: #fff; font-size: 14px;
@@ -261,6 +263,26 @@
   .wrap-table.usecases th { white-space: normal !important; width: 55% !important; font-weight: 500; }
   /* The recommended architecture (doc/recommended.archify.json, rendered by archify), in the theme's colors. */
   .caption picture.arch img { display: block; width: 100%; max-width: 1000px; height: auto; margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; }
+  /* The Overview: ADK and Temporal side by side, each claim over its architecture (archify, doc/*-runtime.archify.json);
+     the live diagrams unfold under the claims. */
+  .caption .duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 12px; align-items: start; }
+  .caption .duo-col { padding: 10px 14px 12px; border-left: 4px solid var(--warn); border-radius: 4px; background: color-mix(in srgb, var(--panel) 70%, var(--bg)); }
+  .caption .duo-col.temporal { border-left-color: var(--ok); }
+  .caption .duo-col .who { margin: 0 0 4px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--adk); }
+  .caption .duo-col.temporal .who { color: var(--tmp); }
+  .caption .duo-col .claim { margin: 0; font-size: 15px; line-height: 1.55; }
+  .caption .duo-col .src { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+  .caption .duo-col .src a { color: var(--accent); }
+  @keyframes diagram-in { from { opacity: 0; clip-path: inset(0 0 100% 0 round 8px); transform: translateY(-6px); }
+                          to { opacity: 1; clip-path: inset(0 0 0 0 round 8px); transform: none; } }
+  @media (max-width: 900px) { .caption .duo { grid-template-columns: minmax(0, 1fr); } }
+  .caption .duo-frame { display: block; width: 100%; height: 640px; margin-top: 12px; border: 1px solid var(--border); border-radius: 8px;
+                        background: var(--bg); animation: diagram-in .7s cubic-bezier(.2, .8, .2, 1) both; }
+  @media (prefers-reduced-motion: reduce) { .caption .duo-frame { animation: none; } }
+  .caption ul.agenda { margin: 4px 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+  .caption ul.agenda li { display: grid; grid-template-columns: 13.5em 4em minmax(0, 1fr); gap: 8px; align-items: baseline; }
+  .caption ul.agenda b { font-weight: 600; }
+  .caption ul.agenda span { color: var(--muted); font-variant-numeric: tabular-nums; }
   .caption .wrap-list { margin: 10px 0 0; padding-left: 22px; display: grid; gap: 8px; }
   .caption .wrap-list span { margin-left: 6px; font-size: 11.5px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 7px; white-space: nowrap; }
   .caption .wrap-close { margin: 14px 0 0; padding: 10px 12px; border-radius: 8px; background: var(--info-bg); }
@@ -276,7 +298,8 @@
     body:not(.content-only) .player { grid-column: 2; grid-row: 1; position: sticky; top: calc(var(--header-h, 58px) + 14px);
       height: calc(100vh - var(--header-h, 58px) - 28px); }
     body:not(.content-only) .acts .long { display: none; }
-    body:not(.content-only) .acts .short, body:not(.content-only) .acts .tabs-label { display: inline; }
+    /* "Overview 1 2 3 4 Wrap-up" on one row: no "Scenario" label, so the tabs never wrap into the dialog's height. */
+    body:not(.content-only) .acts .short { display: inline; }
     body:not(.content-only) .acts button { min-width: 32px; }
     body:not(.content-only) .thread { flex: 1; overflow-y: auto; overscroll-behavior: contain; position: relative; padding: 12px 12px 14px; gap: 10px; }
     /* The docked pane is narrow: every dialog has to fit it without scrolling, so the captions get its whole
@@ -944,7 +967,7 @@ function message(act) {
           act.compare ? h("p", { style: "margin:0" }, "The claim this scenario puts to the test:") : null,
           // Only the claim: the intro has to fit the pane, and Start says the rest.
           thesis(act),
-          act.compare ? null : h("p", { style: "margin:0" }, "Press Start (or →) to step through it."))));
+          act.intro ? h("div", { html: act.intro }) : act.compare ? null : h("p", { style: "margin:0" }, "Press Start (or →) to step through it."))));
   }
   const where = `step ${stepIndex + 1} of ${act.steps.length}`;
   return h("article", { class: `guide-msg ${step.side || ""}` },
@@ -995,13 +1018,17 @@ function renderPlayer() {
   patch(part(".acts"), h("span", { class: "tabs-label" }, "Scenario"), scenarios.map((a, i) =>
     h("button", { type: "button", title: a.title, "aria-pressed": String(i === actIndex), onclick: () => {
       switchScenario(i);
-    } }, h("span", { class: "long" }, a.title), h("span", { class: "short" }, a.tab || a.short))));
+    // Wide view: the title up to its colon ("Scenario 1 · Recovery"), so the tabs fit one row; the
+    // full title is the tooltip and the message's own heading.
+    } }, h("span", { class: "long" }, a.title.split(":")[0]), h("span", { class: "short" }, a.tab || a.short))));
   patch(part(".segs"), act.steps.map((s, i) => h("i", {
     class: i < stepIndex ? "filled" : i === stepIndex ? "current" : "", title: `${i + 1}. ${s.title}` })),
     h("span", { class: "count" }, `${Math.max(0, stepIndex + 1)}/${act.steps.length}`));
 
   // The trail: the steps before this one, folded; each goes back (caption only, nothing is undone).
-  const earlier = act.steps.slice(0, Math.max(0, stepIndex));
+  // A step that only continues the one before it (the Overview's diagrams unfolding under its claims)
+  // is the same message: the step it continues isn't an earlier one.
+  const earlier = act.steps.slice(0, Math.max(0, stepIndex)).filter((s, j) => !(act.steps[j + 1] && act.steps[j + 1].continues && j + 1 <= stepIndex));
   patch(part(".pin-slot"), pinnedClaims(act));
   patch(part(".trail-slot"), earlier.length ? h("details", { class: "trail", open: trailOpen, ontoggle: (e) => { trailOpen = e.target.open; } },
     h("summary", {}, h("span", { class: "count" }, `${earlier.length} earlier`),
@@ -1017,10 +1044,13 @@ function renderPlayer() {
     finishTyping();
     shownKey = key;
     const slot = part(".msg-slot");
+    const continues = Boolean(currentStep() && currentStep().continues);
     slot.replaceChildren(message(act));
     const bubble = slot.querySelector(".guide-bubble");
     const caption = bubble.querySelector(".caption");
-    thread.scrollTo({ top: 0 });
+    // Continuing the message on screen: no new bubble, no typing; only what's new unfolds.
+    if (continues) { slot.querySelector(".guide-msg").classList.add("continued"); streamed.add(key); }
+    else thread.scrollTo({ top: 0 });
     if (!streamed.has(key)) {
       streamed.add(key);
       streaming = true;
@@ -1066,6 +1096,25 @@ function renderPlayer() {
         } }, `On to ${nextAct.short} →`)
       : h("a", { class: "reply is-quiet", href: ASK_AN_EXPERT, target: "_blank", rel: "noopener" }, "The end. Questions? Ask an expert ↗"));
 }
+
+// The Overview's live archify diagrams (static/diagrams, same origin): drop the reader's own header,
+// start the motion, and size the frame to the diagram, so it reads as part of the page.
+window.duoFrame = (frame) => {
+  try {
+    const doc = frame.contentDocument;
+    const style = doc.createElement("style");
+    // Of the reader's toolbar, only the Live/Still switch stays: no theme, style, presentation or export.
+    style.textContent = ".header, .preset-wrap, .export-wrap, button[aria-label='Toggle color theme'],"
+      + " button[aria-label='Enter presentation stage'] { display: none !important; }"
+      + " .toolbar { transform: scale(.85); transform-origin: top right; } body { background: transparent !important; }";
+    doc.head.append(style);
+    const live = doc.querySelector('button[aria-label="Resume motion"]');
+    if (live) live.click();
+    const fit = () => { frame.style.height = `${doc.documentElement.scrollHeight}px`; };
+    fit();
+    new ResizeObserver(fit).observe(doc.body);
+  } catch (err) { console.warn("diagram frame", err); }
+};
 
 // The last step's "Questions?": Temporal's ask-an-expert page, tagged with this demo's campaign.
 const ASK_AN_EXPERT = "https://temporal.io/pages/ask-an-expert?utm_source=temporal_blog&utm_medium=referral&utm_campaign=resumable_vs_durable_agent_demo";

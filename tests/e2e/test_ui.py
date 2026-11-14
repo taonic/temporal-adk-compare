@@ -25,31 +25,34 @@ def page(api, browser, page_errors):
     assert not page_errors, f"errors on the page: {page_errors}"
 
 
-@pytest.mark.parametrize("index", range(4), ids=[s["short"] for s in SCENARIOS[:4]])
-def test_every_scenario_plays_to_its_end(page, index):
-    play_to_the_end(page, index)
+PLAYED = [s for s in SCENARIOS if not s.get("contentOnly")]
+
+
+@pytest.mark.parametrize("act", [s["id"] for s in PLAYED], ids=[s["short"] for s in PLAYED])
+def test_every_scenario_plays_to_its_end(page, act):
+    play_to_the_end(page, act)
     st = state(page, BASE)
     assert st["adk"]["status"] == "completed" and st["temporal"]["status"] == "COMPLETED"
     expected = {
         # Scenario 1: the refund was done before the crash; recovery and the other Worker each finish it once.
-        0: {"adk": (1, 0), "temporal": (1, 0)},
+        "act1": {"adk": (1, 0), "temporal": (1, 0)},
         # Scenario 2: retries; one refund each once the model is back.
-        1: {"adk": (1, 0), "temporal": (1, 0)},
+        "act2": {"adk": (1, 0), "temporal": (1, 0)},
         # Scenario 3 ends on its idempotency-key run: one refund and one deduplicated retry on each side.
-        2: {"adk": (1, 1), "temporal": (1, 1)},
+        "act3": {"adk": (1, 1), "temporal": (1, 1)},
         # Scenario 4: ADK's late approval refunds; Temporal's deadline fired, so it escalated and refunded nothing.
-        3: {"adk": (1, 0), "temporal": (0, 0)},
-    }[index]
+        "act4": {"adk": (1, 0), "temporal": (0, 0)},
+    }[act]
     for side, (moved, replayed) in expected.items():
         assert (side_effects(st, side), side_effects(st, side, replayed=True)) == (moved, replayed), side
-    if index == 3:
+    if act == "act4":
         assert sum(1 for e in st["business"]["escalations"] if e["side"] == "temporal") == 1
     # The end of a scenario offers the next one.
     assert "On to" in page.locator("#player .reply.is-primary").inner_text()
 
 
 def test_next_waits_for_the_steps_outcome(page):
-    open_scenario(page, 0)
+    open_scenario(page, "act1")
     next_step(page)                 # set the stage
     next_step(page)                 # ADK refunds and host A dies: wait for the invocation to stop
     finish_typing(page)
@@ -63,12 +66,12 @@ def test_next_waits_for_the_steps_outcome(page):
 
 
 def test_a_new_scenario_starts_on_a_clean_stage(page):
-    open_scenario(page, 0)
+    open_scenario(page, "act1")
     for _ in range(2):
         next_step(page)
     page.wait_for_selector(NEXT, timeout=60_000)
     assert state(page, BASE)["run"], "Scenario 1 started a run"
-    open_scenario(page, 1)          # its tab resets the stage
+    open_scenario(page, "act2")          # its tab resets the stage
     st = state(page, BASE)
     assert st["run"] is None and not st["business"]["refunds"]
     assert {p["key"]: p["state"] for p in st["processes"] if p["side"] != "system"} == \
@@ -78,7 +81,7 @@ def test_a_new_scenario_starts_on_a_clean_stage(page):
 
 def test_one_call_to_action(page):
     """Next is the only filled button on the page, even when the ADK column needs recovering."""
-    open_scenario(page, 0)
+    open_scenario(page, "act1")
     for _ in range(2):
         next_step(page)
     page.wait_for_selector(NEXT, timeout=60_000)  # ADK is stranded: its recovery button is relevant now
@@ -90,7 +93,7 @@ def test_one_call_to_action(page):
 
 
 def test_code_links_open_the_code(page):
-    open_scenario(page, 0)
+    open_scenario(page, "act1")
     next_step(page)
     finish_typing(page)
     page.locator("#player a[data-code='adk/agent']").click()
@@ -105,14 +108,14 @@ def test_code_links_open_the_code(page):
 
 def test_the_columns_fit_one_screen(page):
     """The processes, the flow and the panels of both columns, without scrolling, at 1490x811."""
-    open_scenario(page, 0)
+    open_scenario(page, "act1")
     bottom = page.evaluate("Math.max(...[...document.querySelectorAll('.side')].map((e) => e.getBoundingClientRect().bottom))")
     assert bottom <= 811, f"the columns end at {bottom}px"
 
 
 def test_code_in_a_caption_opens_that_code(page):
     """A caption's code opens where it is: the wrap-up's `retry_options` highlights the model's retry options."""
-    open_scenario(page, 4)
+    open_scenario(page, "wrap")
     next_step(page)
     finish_typing(page)
     page.locator("#player .msg-slot a[data-hl='retry_options=MODEL_RETRY']").first.click()

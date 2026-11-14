@@ -62,7 +62,7 @@ def test_a_visitor_gets_a_stage_of_their_own_and_plays_a_scenario(browser, visit
     st = state(page, BASE)
     assert st["run"] is None, "a new stage starts clean"
 
-    play_to_the_end(page, 0)
+    play_to_the_end(page, "act1")
     st = state(page, BASE)
     assert st["adk"]["status"] == "completed" and st["temporal"]["status"] == "COMPLETED"
     assert sum(1 for r in st["business"]["refunds"] if not r["replayed"]) == 2, "one refund on each side"
@@ -78,7 +78,7 @@ def test_stages_are_isolated(browser, visitors, page_errors):
         page.goto(BASE)
     for page in (a, b):
         page.wait_for_selector("#player .acts button", timeout=240_000)
-    open_scenario(a, 0)
+    open_scenario(a, "act1")
     for _ in range(2):
         next_step(a)                # set the stage, then ADK host A dies
     a.wait_for_selector("#player .waiting", state="detached", timeout=120_000)

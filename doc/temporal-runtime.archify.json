@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Durable agent: Temporal + ADK",
+    "output": "doc/temporal-runtime.html",
+    "quality_profile": "showcase",
+    "locale": "en"
+  },
+  "components": [
+    {
+      "id": "tmp-api",
+      "type": "external",
+      "label": "Business API",
+      "sublabel": "a refund request",
+      "pos": [
+        40,
+        40
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "server",
+      "type": "cloud",
+      "label": "Temporal Server",
+      "sublabel": "history · timers · retries",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "workers",
+      "type": "backend",
+      "label": "Workers A, B",
+      "sublabel": "Workflow + ADK plugin · agent.py",
+      "pos": [
+        360,
+        200
+      ],
+      "size": [
+        240,
+        64
+      ]
+    },
+    {
+      "id": "biz",
+      "type": "external",
+      "label": "Business systems",
+      "sublabel": "payments, orders, email",
+      "pos": [
+        360,
+        520
+      ],
+      "size": [
+        240,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Durable agent: Temporal + ADK",
+      "wraps": [
+        "server",
+        "workers"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "tmp-start",
+      "from": "tmp-api",
+      "to": "server",
+      "label": "start Workflow",
+      "variant": "emphasis"
+    },
+    {
+      "id": "tmp-poll",
+      "from": "workers",
+      "to": "server",
+      "label": "poll, record results"
+    },
+    {
+      "id": "tmp-tools",
+      "from": "workers",
+      "to": "biz",
+      "label": "Activities (HTTP)"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Who resumes after a crash",
+      "items": [
+        "The Temporal Server: it hands the work to any Worker on the task queue",
+        "Retries and timers are durable, on the Server"
+      ]
+    }
+  ]
+}

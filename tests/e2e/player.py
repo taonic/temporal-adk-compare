@@ -8,9 +8,14 @@ SCENARIOS = json.loads((Path(__file__).resolve().parents[2] / "refund_demo/stati
 NEXT = "#player .replies:not([hidden]) .reply.is-primary:not([disabled])"
 
 
-def open_scenario(page, index: int) -> None:
+def position(act: str) -> int:
+    """A scenario's place in the tabs, by its id ("act1", "wrap"): tests never count tabs."""
+    return next(i for i, a in enumerate(SCENARIOS) if a["id"] == act)
+
+
+def open_scenario(page, act: str) -> None:
     """Its tab (which also cleans the stage), then its intro, typed out."""
-    page.locator("#player .acts button").nth(index).click()
+    page.locator("#player .acts button").nth(position(act)).click()
     page.wait_for_selector(NEXT, timeout=60_000)  # the reset done and the intro typed out
 
 
@@ -39,11 +44,12 @@ def step_count(page) -> str:
     return page.locator("#player .segs .count").inner_text()
 
 
-def play_to_the_end(page, index: int) -> None:
+def play_to_the_end(page, act: str) -> None:
     """Start the scenario and press Next through every step, then wait for the last one's outcome."""
-    steps = len(SCENARIOS[index]["steps"])
-    open_scenario(page, index)
-    for step in SCENARIOS[index]["steps"]:
+    scenario = SCENARIOS[position(act)]
+    steps = len(scenario["steps"])
+    open_scenario(page, act)
+    for step in scenario["steps"]:
         next_step(page)
         if "adk_recovered" in (step.get("waitFor") or []):
             run_recovery_scan(page)
